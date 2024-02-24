@@ -1,4 +1,4 @@
-package fitmymacrosLambda.src.test.java.com.fitmymacros;
+package com.fitmymacros;
 
 import static org.junit.Assert.assertTrue;
 
