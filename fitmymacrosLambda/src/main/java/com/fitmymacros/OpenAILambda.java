@@ -21,33 +21,10 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
     @Override
     public Object handleRequest(Object input, Context context) {
 
-        String openAiKey;
+        String openAiKey = this.getOpenAIKey();
+        String requestBody = this.generateRequestBody();
 
-        // Check if the environment variable is set
-        String envOpenAiKey = System.getenv("OPENAI_API_KEY");
-        if (envOpenAiKey != null && !envOpenAiKey.isEmpty()) {
-            openAiKey = envOpenAiKey;
-        } else {
-            AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder.defaultClient();
-            String parameterName = "OpenAI-API_Key_Encrypted";
-
-            GetParameterRequest parameterRequest = new GetParameterRequest()
-                    .withName(parameterName)
-                    .withWithDecryption(true);
-            GetParameterResult parameterResult = ssmClient.getParameter(parameterRequest);
-            openAiKey = parameterResult.getParameter().getValue();
-        }
-
-        String prompt = "please generate a recipe, that contains 700kcal with at least 50g of protein, using chicken. Give me the macros and cooking process.";
-        int maxTokens = 500;
-        String modelName = "gpt-3.5-turbo-instruct";
-        String requestBody = String.format("{\"prompt\": \"%s\", \"max_tokens\": %d, \"model\": \"%s\"}", prompt,
-                maxTokens, modelName);
-
-        // Create an HTTP client
         HttpClient httpClient = HttpClient.newHttpClient();
-
-        // Create an HTTP request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(OPENAI_API_ENDPOINT))
                 .header("Content-Type", "application/json")
@@ -66,4 +43,54 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
             return "Error occurred: " + e.getMessage();
         }
     }
+
+    /**
+     * This method gets the openai key from env variable (if exists) or from the
+     * parameter store
+     * 
+     * @return
+     */
+    private String getOpenAIKey() {
+        String openAiKey;
+
+        // Check if the environment variable is set
+        String envOpenAiKey = System.getenv("OPENAI_API_KEY");
+        if (envOpenAiKey != null && !envOpenAiKey.isEmpty()) {
+            openAiKey = envOpenAiKey;
+        } else {
+            openAiKey = this.getOpenAIKeyFromParameterStore();
+        }
+        return openAiKey;
+    }
+
+    /**
+     * This method retrieves the clear text value for the openai key from the
+     * parameter store
+     * 
+     * @return
+     */
+    private String getOpenAIKeyFromParameterStore() {
+        AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder.defaultClient();
+        String parameterName = "OpenAI-API_Key_Encrypted";
+
+        GetParameterRequest parameterRequest = new GetParameterRequest()
+                .withName(parameterName)
+                .withWithDecryption(true);
+        GetParameterResult parameterResult = ssmClient.getParameter(parameterRequest);
+        return parameterResult.getParameter().getValue();
+    }
+
+    /**
+     * This method generates the request body that will be sent to the openai api
+     * 
+     * @return
+     */
+    private String generateRequestBody() {
+        String prompt = "please generate a recipe, that contains 700kcal with at least 50g of protein, using chicken. Give me the macros and cooking process.";
+        int maxTokens = 500;
+        String modelName = "gpt-3.5-turbo-instruct";
+        return String.format("{\"prompt\": \"%s\", \"max_tokens\": %d, \"model\": \"%s\"}", prompt,
+                maxTokens, modelName);
+    }
+
 }
