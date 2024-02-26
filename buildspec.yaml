@@ -20,5 +20,5 @@ phases:
 
 artifacts:
   files:
-    - target/appspec.yaml
-    - target/openAILambda.jar
+    - fitmymacrosLambda/target/appspec.yaml
+    - fitmymacrosLambda/target/openAILambda.jar
