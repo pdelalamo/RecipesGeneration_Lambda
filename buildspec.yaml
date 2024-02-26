@@ -8,6 +8,7 @@ phases:
       - echo "Installing Maven using Docker"
   pre_build:
     commands:
+      - cd fitmymacrosLambda
       - echo "Executing pre-build commands"
   build:
     commands:
