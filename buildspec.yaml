@@ -3,22 +3,21 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      java: corretto17 # Specify the Java runtime version
+      java: corretto17
     commands:
-      - echo "Installing Maven"
-      - apt-get update && apt-get install -y maven # Install Maven if it's not already available
+      - echo "Installing Maven using Docker"
   pre_build:
     commands:
       - echo "Executing pre-build commands"
   build:
     commands:
       - echo "Compiling the Maven project"
-      - mvn clean install -DskipTests=false # Compile the project and run tests
+      - docker run --rm -v $(pwd):/usr/src/mymaven -w /usr/src/mymaven maven:3.8.4 mvn clean install -DskipTests=false
   post_build:
     commands:
       - echo "Executing post-build commands"
-      - mv target/my-project.jar ../ # Move the built artifact to a directory accessible by CodeDeploy
+      - mv target/openAILambda.jar ../
 
 artifacts:
   files:
-    - my-project.jar # Specify the artifact to be passed to the next stage
+    - openAILambda.jar
