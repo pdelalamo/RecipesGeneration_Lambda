@@ -17,7 +17,7 @@ phases:
   post_build:
     commands:
       - echo "Executing post-build commands"
-      - mv fitmymacrosLambda/target/openAILambda.jar ../
+      - mv fitmymacrosLambda/target/openAILambda.jar .
 
 artifacts:
   files:
