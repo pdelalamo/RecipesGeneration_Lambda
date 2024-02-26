@@ -17,8 +17,8 @@ phases:
   post_build:
     commands:
       - echo "Executing post-build commands"
-      - mv target/openAILambda.jar ../
 
 artifacts:
   files:
-    - openAILambda.jar
+    - target/appspec.yaml
+    - target/openAILambda.jar
