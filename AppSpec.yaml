@@ -7,5 +7,4 @@ Resources:
         Alias: DEV
         CurrentVersion: 1
         TargetVersion: 2
-        TargetAlias: OpenAILambdaDev
         DeploymentId: OpenAILambda-Deployment
