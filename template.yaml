@@ -2,12 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 
 Resources:
-  MyLambdaFunction:
+  OpenAILambda:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: com.fitmymacros.OpenAILambda::handleRequest
       Runtime: java11
-      CodeUri: fitmymacros-1.0-SNAPSHOT.jar
+      CodeUri: openAILambda.jar
       MemorySize: 512
       Timeout: 30
       Environment:
@@ -21,10 +21,10 @@ Resources:
       DefinitionBody:
         swagger: '2.0'
         info:
-          title: 'My API'
+          title: 'FitMyMacrosApi'
         paths:
-          /myresource:
+          /recipes:
             get:
               x-amazon-apigateway-integration:
                 type: aws_proxy
-                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyLambdaFunction.Arn}/invocations'
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambda.Arn}/invocations'

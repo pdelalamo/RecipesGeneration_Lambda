@@ -14,14 +14,12 @@ phases:
     commands:
       - echo "Compiling the Maven project"
       - docker run --rm -v $(pwd):/usr/src/mymaven -w /usr/src/mymaven maven:3.8.4 mvn clean install -DskipTests=false
-      - ls
       - mv target/openAILambda.jar ../
-      - mv target/appspec.yaml ../
+
   post_build:
     commands:
       - echo "Executing post-build commands"
 
 artifacts:
   files:
-    - appspec.yaml
     - openAILambda.jar
