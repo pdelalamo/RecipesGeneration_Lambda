@@ -2,17 +2,22 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 
 Resources:
-  OpenAILambda:
+  OpenAILambdaFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: com.fitmymacros.OpenAILambda::handleRequest
       Runtime: java11
-      CodeUri: openAILambda.jar
+      CodeUri: target/openAILambda.jar
       MemorySize: 512
       Timeout: 30
       Environment:
         Variables:
           OPENAI_API_KEY: 'YOUR_DEFAULT_API_KEY_VALUE'
+    MyLambdaAlias:
+      Type: "AWS::Lambda::Alias"
+      Properties:
+        FunctionName: !Ref OpenAILambdaFunction
+        Name: dev
 
   MyApi:
     Type: 'AWS::Serverless::Api'
@@ -27,4 +32,4 @@ Resources:
             get:
               x-amazon-apigateway-integration:
                 type: aws_proxy
-                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambda.Arn}/invocations'
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaFunction.Arn}:dev/invocations'

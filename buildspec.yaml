@@ -14,13 +14,4 @@ phases:
     commands:
       - echo "Compiling the Maven project"
       - docker run --rm -v $(pwd):/usr/src/mymaven -w /usr/src/mymaven maven:3.8.4 mvn clean install -DskipTests=false
-      - mv target/openAILambda.jar ../
-
-  post_build:
-    commands:
-      - echo "Executing post-build commands"
-
-artifacts:
-  files:
-    - openAILambda.jar
-    - AppSpec.yaml
+      - sam deploy --template-file template.yaml --stack-name my-lambda-stack --capabilities CAPABILITY_IAM
