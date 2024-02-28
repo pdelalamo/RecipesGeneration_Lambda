@@ -7,7 +7,7 @@ Resources:
     Properties:
       Handler: com.fitmymacros.OpenAILambda::handleRequest
       Runtime: java11
-      CodeUri: target/openAILambda.jar
+      CodeUri: target/openAILambda-jar-with-dependencies.jar
       MemorySize: 512
       Timeout: 30
 
