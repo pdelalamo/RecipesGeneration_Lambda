@@ -14,12 +14,6 @@ Resources:
         Variables:
           OPENAI_API_KEY: 'YOUR_DEFAULT_API_KEY_VALUE'
 
-  MyLambdaAlias:
-    Type: "AWS::Lambda::Alias"
-    Properties:
-      FunctionName: !GetAtt OpenAILambdaFunction.Arn
-      Name: dev
-
   MyApi:
     Type: 'AWS::Serverless::Api'
     Properties:
@@ -39,4 +33,4 @@ Resources:
               x-amazon-apigateway-integration:
                 httpMethod: GET
                 type: aws_proxy
-                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyLambdaAlias.FunctionName}:${MyLambdaAlias.Name}/invocations'
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaFunction.Arn}/invocations'
