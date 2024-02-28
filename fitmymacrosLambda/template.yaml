@@ -8,6 +8,14 @@ Resources:
       Handler: com.fitmymacros.OpenAILambda::handleRequest
       Runtime: java11
       CodeUri: target/openAILambda-jar-with-dependencies.jar
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: '*'
       MemorySize: 512
       Timeout: 30
 
