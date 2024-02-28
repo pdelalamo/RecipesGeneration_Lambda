@@ -10,9 +10,6 @@ Resources:
       CodeUri: target/openAILambda.jar
       MemorySize: 512
       Timeout: 30
-      Environment:
-        Variables:
-          OPENAI_API_KEY: 'YOUR_DEFAULT_API_KEY_VALUE'
 
   MyApi:
     Type: 'AWS::Serverless::Api'

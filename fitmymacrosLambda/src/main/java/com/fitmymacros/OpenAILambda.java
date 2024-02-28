@@ -9,14 +9,17 @@ import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParameterResult;
+
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
+import software.amazon.awssdk.services.ssm.model.SsmException;
 
 public class OpenAILambda implements RequestHandler<Object, Object> {
 
     private static final String OPENAI_API_ENDPOINT = "https://api.openai.com/v1/completions";
+    private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
 
     @Override
     public Object handleRequest(Object input, Context context) {
@@ -70,14 +73,25 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
      * @return
      */
     private String getOpenAIKeyFromParameterStore() {
-        AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder.defaultClient();
-        String parameterName = "OpenAI-API_Key_Encrypted";
+        SsmClient ssmClient = SsmClient.builder()
+                .region(Region.EU_WEST_3)
+                .build();
 
-        GetParameterRequest parameterRequest = new GetParameterRequest()
-                .withName(parameterName)
-                .withWithDecryption(true);
-        GetParameterResult parameterResult = ssmClient.getParameter(parameterRequest);
-        return parameterResult.getParameter().getValue();
+        try {
+            GetParameterRequest parameterRequest = GetParameterRequest.builder()
+                    .name(OPENAI_API_KEY_NAME)
+                    .build();
+
+            GetParameterResponse parameterResponse = ssmClient.getParameter(parameterRequest);
+            return parameterResponse.parameter().value();
+
+        } catch (SsmException e) {
+            System.err.println("Error getting parameter: " + e.getMessage());
+            System.exit(1);
+        } finally {
+            ssmClient.close();
+        }
+        return null;
     }
 
     /**
