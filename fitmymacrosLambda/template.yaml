@@ -30,6 +30,12 @@ Resources:
         paths:
           /recipes:
             get:
+              responses:
+              '200':
+                description: 'Successful response'
+              '400':
+                description: 'Error' 
               x-amazon-apigateway-integration:
+                httpMethod: GET
                 type: aws_proxy
                 uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaFunction.Arn}:dev/invocations'
