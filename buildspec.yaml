@@ -19,3 +19,5 @@ phases:
     commands:
       - echo "Updating API Gateway to use the lambda alias 'dev' for the 'dev' stage"
       - aws apigateway update-stage --rest-api-id MyApi --stage-name dev --patch-operations op=replace,path=/deploymentId,value=MyApidevStage
+      - aws apigateway update-integration --rest-api-id MyApi --resource-id 'recipes' --http-method GET --patch-operations op=replace,path=/uri,value="arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/{arn:aws:lambda:eu-west-3:829527069263:function:openailambda-stack-OpenAILambdaFunction-KAbV8SPzdNXM}:dev/invocations" --stage-name dev
+
