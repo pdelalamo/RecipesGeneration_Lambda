@@ -46,4 +46,4 @@ Resources:
               x-amazon-apigateway-integration:
                 httpMethod: GET
                 type: aws_proxy
-                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaAlias.Arn}:dev/invocations'
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaFunction.Arn}:dev/invocations'
