@@ -18,11 +18,12 @@ Resources:
               Resource: '*'
       MemorySize: 512
       Timeout: 30
+      
   OpenAILambdaAlias:
      Type: AWS::Lambda::Alias
      DependsOn: OpenAILambdaFunction
      Properties:
-      FunctionName: !GetAtt OpenAILambdaFunction.Arn
+      FunctionName: !Ref OpenAILambdaFunction
       FunctionVersion: !GetAtt OpenAILambdaFunction.Version
       Name: dev  
 
