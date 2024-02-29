@@ -15,3 +15,7 @@ phases:
       - echo "Compiling the Maven project"
       - docker run --rm -v $(pwd):/usr/src/mymaven -w /usr/src/mymaven maven:3.8.4 mvn clean compile assembly:single -DskipTests=false
       - sam deploy --template-file template.yaml --stack-name openailambda-stack --capabilities CAPABILITY_IAM --s3-bucket fit-my-macros
+  post_build:
+    commands:
+      - echo "Updating API Gateway to use the lambda alias 'dev' for the 'dev' stage"
+      - aws apigateway update-stage --rest-api-id MyApi --stage-name dev --patch-operations op=replace,path=/deploymentId,value=MyApidevStage
