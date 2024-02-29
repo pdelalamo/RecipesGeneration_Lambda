@@ -28,6 +28,7 @@ Resources:
 
   MyApi:
     Type: 'AWS::Serverless::Api'
+    DependsOn: OpenAILambdaAlias
     Properties:
       StageName: dev
       DefinitionBody:
