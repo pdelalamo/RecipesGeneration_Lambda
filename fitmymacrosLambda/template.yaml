@@ -20,6 +20,7 @@ Resources:
       Timeout: 30
   OpenAILambdaAlias:
      Type: AWS::Lambda::Alias
+     DependsOn: OpenAILambdaFunction
      Properties:
       FunctionName: !Ref OpenAILambdaFunction.Arn
       FunctionVersion: !GetAtt OpenAILambdaFunction.Version
