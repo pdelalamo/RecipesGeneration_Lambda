@@ -5,7 +5,6 @@ Resources:
   OpenAILambdaFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      AutoPublishAlias: dev
       Handler: com.fitmymacros.OpenAILambda::handleRequest
       Runtime: java11
       CodeUri: target/openAILambda-jar-with-dependencies.jar
@@ -25,7 +24,7 @@ Resources:
      DependsOn: OpenAILambdaFunction
      Properties:
       FunctionName: !Ref OpenAILambdaFunction
-      FunctionVersion: !Ref OpenAILambdaFunction.Version
+      FunctionVersion: $LATEST
       Name: dev  
 
   MyApi:
