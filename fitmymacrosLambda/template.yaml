@@ -5,10 +5,7 @@ Resources:
   OpenAILambdaFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      AutoPublishAlias: 
-        Name: dev
-        Description: Live version of the function
-        FunctionVersion: $LATEST
+      AutoPublishAlias: dev
       Handler: com.fitmymacros.OpenAILambda::handleRequest
       Runtime: java11
       CodeUri: target/openAILambda-jar-with-dependencies.jar
@@ -22,10 +19,18 @@ Resources:
               Resource: '*'
       MemorySize: 512
       Timeout: 30
+      
+  OpenAILambdaAlias:
+     Type: AWS::Lambda::Alias
+     DependsOn: OpenAILambdaFunction
+     Properties:
+      FunctionName: !Ref OpenAILambdaFunction
+      FunctionVersion: !Ref OpenAILambdaFunction.Version
+      Name: dev  
 
   MyApi:
     Type: 'AWS::Serverless::Api'
-    DependsOn: OpenAILambdaFunction
+    DependsOn: OpenAILambdaAlias
     Properties:
       StageName: dev
       DefinitionBody:
