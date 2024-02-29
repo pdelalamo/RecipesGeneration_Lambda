@@ -24,7 +24,7 @@ Resources:
      DependsOn: OpenAILambdaFunction
      Properties:
       FunctionName: !Ref OpenAILambdaFunction
-      FunctionVersion: !GetAtt OpenAILambdaFunction.Version
+      FunctionVersion: !Ref OpenAILambdaFunction.Version
       Name: dev  
 
   MyApi:
