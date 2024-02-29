@@ -80,6 +80,7 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
         try {
             GetParameterRequest parameterRequest = GetParameterRequest.builder()
                     .name(OPENAI_API_KEY_NAME)
+                    .withDecryption(true)
                     .build();
 
             GetParameterResponse parameterResponse = ssmClient.getParameter(parameterRequest);
