@@ -18,6 +18,12 @@ Resources:
               Resource: '*'
       MemorySize: 512
       Timeout: 30
+  OpenAILambdaAlias:
+     Type: AWS::Lambda::Alias
+     Properties:
+      FunctionName: !GetAtt OpenAILambdaFunction.Arn
+      FunctionVersion: !GetAtt OpenAILambdaFunction.Version
+      Name: dev  
 
   MyApi:
     Type: 'AWS::Serverless::Api'
@@ -38,4 +44,4 @@ Resources:
               x-amazon-apigateway-integration:
                 httpMethod: GET
                 type: aws_proxy
-                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaFunction.Arn}/invocations'
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OpenAILambdaAlias.Arn}:dev/invocations'
