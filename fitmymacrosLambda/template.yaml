@@ -21,7 +21,7 @@ Resources:
   OpenAILambdaAlias:
      Type: AWS::Lambda::Alias
      Properties:
-      FunctionName: !GetAtt OpenAILambdaFunction.Arn
+      FunctionName: !Ref OpenAILambdaFunction.Arn
       FunctionVersion: !GetAtt OpenAILambdaFunction.Version
       Name: dev  
 
