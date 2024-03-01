@@ -39,7 +39,7 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("statusCode", 200);
-            responseBody.put("body", response.body().toString());
+            responseBody.put("body", "successful deploy" + response.body().toString());
             return responseBody;
         } catch (Exception e) {
             e.printStackTrace();
