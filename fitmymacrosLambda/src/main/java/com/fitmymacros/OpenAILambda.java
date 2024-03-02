@@ -20,30 +20,21 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
 
     private static final String OPENAI_API_ENDPOINT = "https://api.openai.com/v1/completions";
     private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
+    private final SsmClient ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Override
     public Object handleRequest(Object input, Context context) {
 
         String openAiKey = this.getOpenAIKey();
         String requestBody = this.generateRequestBody();
-
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(OPENAI_API_ENDPOINT))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + openAiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
+        HttpRequest request = this.generateHttpRequest(openAiKey, requestBody);
 
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("statusCode", 200);
-            responseBody.put("body", "successful deploy" + response.body().toString());
-            return responseBody;
+            HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return this.buildSuccessResponse(response.body().toString());
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Error occurred: " + e.getMessage();
+            return this.buildErrorResponse(e.getMessage());
         }
     }
 
@@ -73,24 +64,19 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
      * @return
      */
     private String getOpenAIKeyFromParameterStore() {
-        SsmClient ssmClient = SsmClient.builder()
-                .region(Region.EU_WEST_3)
-                .build();
-
         try {
             GetParameterRequest parameterRequest = GetParameterRequest.builder()
                     .name(OPENAI_API_KEY_NAME)
                     .withDecryption(true)
                     .build();
 
-            GetParameterResponse parameterResponse = ssmClient.getParameter(parameterRequest);
+            GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
             return parameterResponse.parameter().value();
 
         } catch (SsmException e) {
-            System.err.println("Error getting parameter: " + e.getMessage());
             System.exit(1);
         } finally {
-            ssmClient.close();
+            this.ssmClient.close();
         }
         return null;
     }
@@ -106,6 +92,26 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
         String modelName = "gpt-3.5-turbo-instruct";
         return String.format("{\"prompt\": \"%s\", \"max_tokens\": %d, \"model\": \"%s\"}", prompt,
                 maxTokens, modelName);
+    }
+
+    private HttpRequest generateHttpRequest(String openAiKey, String requestBody) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(OPENAI_API_ENDPOINT))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + openAiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+    }
+
+    private Map<String, Object> buildSuccessResponse(String message) {
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("statusCode", 200);
+        responseBody.put("body", message);
+        return responseBody;
+    }
+
+    private String buildErrorResponse(String errorMessage) {
+        return "Error occurred: " + errorMessage;
     }
 
 }
