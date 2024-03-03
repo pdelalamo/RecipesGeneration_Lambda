@@ -22,13 +22,14 @@ public class OpenAILambda implements RequestHandler<Object, Object> {
     private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
     private final SsmClient ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private static String OPENAI_API_KEY;
 
     @Override
     public Object handleRequest(Object input, Context context) {
 
-        String openAiKey = this.getOpenAIKey();
+        OPENAI_API_KEY = this.getOpenAIKey();
         String requestBody = this.generateRequestBody();
-        HttpRequest request = this.generateHttpRequest(openAiKey, requestBody);
+        HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
 
         try {
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
