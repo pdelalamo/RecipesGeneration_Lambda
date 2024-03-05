@@ -92,8 +92,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
 
         } catch (SsmException e) {
             System.exit(1);
-        } finally {
-            this.ssmClient.close();
         }
         return null;
     }
@@ -153,8 +151,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
 
         } catch (DynamoDbException e) {
             throw new RuntimeException("Error retrieving data from DynamoDB: " + e.getMessage());
-        } finally {
-            dynamoDbClient.close();
         }
     }
 
