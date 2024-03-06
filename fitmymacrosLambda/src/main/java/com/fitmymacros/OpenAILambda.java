@@ -39,7 +39,8 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         OPENAI_API_KEY = this.getOpenAIKey();
         System.out.println(input.toString());
-        String requestBody = this.generateRequestBody((Map<String, Object>) input.get("queryStringParameters"));
+        String requestBody = this
+                .generateRequestBody((Map<String, Object>) input.get("multiValueQueryStringParameters"));
         HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
 
         try {
