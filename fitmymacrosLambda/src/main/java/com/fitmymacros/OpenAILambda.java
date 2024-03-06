@@ -87,8 +87,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         } catch (SsmException e) {
             System.exit(1);
-        } finally {
-            this.ssmClient.close();
         }
         return null;
     }
@@ -148,8 +146,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         } catch (DynamoDbException e) {
             throw new RuntimeException("Error retrieving data from DynamoDB: " + e.getMessage());
-        } finally {
-            dynamoDbClient.close();
         }
     }
 
