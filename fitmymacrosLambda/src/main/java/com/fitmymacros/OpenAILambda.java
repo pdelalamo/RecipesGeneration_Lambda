@@ -10,6 +10,8 @@ import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -22,7 +24,7 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import software.amazon.awssdk.services.ssm.model.SsmException;
 
-public class OpenAILambda implements RequestHandler<Map<String, Object>, Object> {
+public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final String OPENAI_API_ENDPOINT = "https://api.openai.com/v1/completions";
     private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
@@ -35,12 +37,13 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             .build();
 
     @Override
-    public Object handleRequest(Map<String, Object> input, Context context) {
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
 
         OPENAI_API_KEY = this.getOpenAIKey();
-        System.out.println(input.toString());
-        String requestBody = this
-                .generateRequestBody((Map<String, Object>) input.get("multiValueQueryStringParameters"));
+        System.out.println("Input event: " + input);
+        System.out.println("Input event toString(): " + input.toString());
+        System.out.println("Input event query params: " + input.getQueryStringParameters());
+        String requestBody = this.generateRequestBody(input.getQueryStringParameters());
         HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
 
         try {
@@ -97,21 +100,21 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * 
      * @return
      */
-    private String generateRequestBody(Map<String, Object> input) {
+    private String generateRequestBody(Map<String, String> input) {
         String userId = input.get("userId").toString();
         String measureUnit = input.get("measureUnit").toString();
-        int calories = (Integer) input.get("calories");
-        int protein = (Integer) input.get("protein");
-        int carbs = (Integer) input.get("carbs");
-        int fat = (Integer) input.get("fat");
+        int calories = Integer.parseInt(input.get("calories"));
+        int protein = Integer.parseInt(input.get("protein"));
+        int carbs = Integer.parseInt(input.get("carbs"));
+        int fat = Integer.parseInt(input.get("fat"));
         String satietyLevel = input.get("satietyLevel").toString();
         String precision = input.get("precision").toString(); // exact grams of protein, carbs and fat, or slight
                                                               // variation?
-        boolean anyIngredientsMode = (Boolean) input.get("anyIngredientsMode");
-        boolean expandIngredients = (Boolean) input.get("expandIngredients");
-        boolean glutenFree = (Boolean) input.get("glutenFree");
-        boolean vegan = (Boolean) input.get("vegan");
-        boolean vegetarian = (Boolean) input.get("vegetarian");
+        boolean anyIngredientsMode = Boolean.parseBoolean(input.get("anyIngredientsMode"));
+        boolean expandIngredients = Boolean.parseBoolean(input.get("expandIngredients"));
+        boolean glutenFree = Boolean.parseBoolean(input.get("glutenFree"));
+        boolean vegan = Boolean.parseBoolean(input.get("vegan"));
+        boolean vegetarian = Boolean.parseBoolean(input.get("vegetarian"));
         String cuisineStyle = input.get("cuisineStyle").toString();
         String cookingTime = input.get("cookingTime").toString();
         String flavor = input.get("flavor").toString();
@@ -283,15 +286,18 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                 .build();
     }
 
-    private Map<String, Object> buildSuccessResponse(String message) {
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("statusCode", 200);
-        responseBody.put("body", message);
-        return responseBody;
+    private APIGatewayProxyResponseEvent buildSuccessResponse(String message) {
+        APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
+        responseEvent.setBody(message);
+        responseEvent.setStatusCode(200);
+        return responseEvent;
     }
 
-    private String buildErrorResponse(String errorMessage) {
-        return "Error occurred: " + errorMessage;
+    private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
+        APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
+        responseEvent.setBody(errorMessage);
+        responseEvent.setStatusCode(500);
+        return responseEvent;
     }
 
 }
