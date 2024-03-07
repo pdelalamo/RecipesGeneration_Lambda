@@ -185,7 +185,8 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         StringBuilder promptBuilder = new StringBuilder();
 
         // Number of recipes to generate
-        promptBuilder.append("Please generate 5 to 10 recipes");
+        promptBuilder.append(
+                "Please generate 5 recipes, with 4 clearly defined sections (cooking time, calories and macros, ingredients and quantities, and cooking process)");
 
         // Target nutritional goals
         promptBuilder.append(String.format(" with %s %d calories", precision, calories));
@@ -271,7 +272,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
         }
 
-        int maxTokens = 500;
+        int maxTokens = 5000;
         String modelName = "gpt-3.5-turbo-instruct";
         return String.format("{\"prompt\": \"%s\", \"max_tokens\": %d, \"model\": \"%s\"}", prompt,
                 maxTokens, modelName);
