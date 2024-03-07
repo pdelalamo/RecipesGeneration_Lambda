@@ -272,7 +272,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
         }
 
-        int maxTokens = 5000;
+        int maxTokens = 3000;
         String modelName = "gpt-3.5-turbo-instruct";
         return String.format("{\"prompt\": \"%s\", \"max_tokens\": %d, \"model\": \"%s\"}", prompt,
                 maxTokens, modelName);
