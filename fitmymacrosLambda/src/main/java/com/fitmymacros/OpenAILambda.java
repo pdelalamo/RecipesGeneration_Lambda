@@ -12,6 +12,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -263,6 +267,8 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         if (occasion != null && !occasion.isEmpty()) {
             promptBuilder.append(String.format(", suitable for %s", occasion));
         }
+        promptBuilder.append(String.format("Please, generate the response following the next example format: %s",
+                this.generateResponseTemplate()));
 
         // Construct the final prompt
         String prompt = promptBuilder.toString();
@@ -287,11 +293,87 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                 .build();
     }
 
-    private APIGatewayProxyResponseEvent buildSuccessResponse(String message) {
+    private APIGatewayProxyResponseEvent buildSuccessResponse(String message)
+            throws JsonMappingException, JsonProcessingException {
         APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
-        responseEvent.setBody(message);
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(message);
+        String recipesText = rootNode.get("choices").get(0).get("text").asText();
+        responseEvent.setBody(recipesText);
         responseEvent.setStatusCode(200);
         return responseEvent;
+    }
+
+    private String generateResponseTemplate() {
+        return "{\n" + //
+                "  \"recipes\": [\n" + //
+                "    {\n" + //
+                "      \"recipeName\": \"Baked Chicken Parmesan\",\n" + //
+                "      \"cookingTime\": \"30 minutes\",\n" + //
+                "      \"caloriesAndMacros\": {\n" + //
+                "        \"calories\": \"700\",\n" + //
+                "        \"protein\": \"57g\",\n" + //
+                "        \"carbs\": \"51g\",\n" + //
+                "        \"fat\": \"10g\"\n" + //
+                "      },\n" + //
+                "      \"ingredientsAndQuantities\": [\n" + //
+                "        { \"ingredient\": \"Chicken breasts\", \"quantity\": \"730g\" },\n" + //
+                "        { \"ingredient\": \"Rolled oats, blended into flour\", \"quantity\": \"1 cup\" },\n" + //
+                "        { \"ingredient\": \"Grated parmesan cheese\", \"quantity\": \"1/4 cup\" },\n" + //
+                "        { \"ingredient\": \"Egg, beaten\", \"quantity\": \"1\" },\n" + //
+                "        { \"ingredient\": \"Marinara sauce\", \"quantity\": \"1 cup\" },\n" + //
+                "        { \"ingredient\": \"Mozzarella cheese, shredded\", \"quantity\": \"1 cup\" }\n" + //
+                "      ],\n" + //
+                "      \"cookingProcess\": [\n" + //
+                "        \"Preheat the oven to 375°F (190°C) and line a baking sheet with parchment paper.\",\n" + //
+                "        \"In a shallow dish, mix together the oat flour and parmesan cheese.\",\n" + //
+                "        \"Dip each chicken breast in the beaten egg, then coat it with the oat flour mixture.\",\n" + //
+                "        \"Place the coated chicken breasts on the prepared baking sheet and bake for 20 minutes.\",\n"
+                + //
+                "        \"Remove from the oven and top each chicken breast with marinara sauce and shredded mozzarella cheese.\",\n"
+                + //
+                "        \"Bake for an additional 10 minutes, or until the cheese is melted and the chicken is fully cooked.\",\n"
+                + //
+                "        \"Serve hot with a side of your choice, such as brown rice or a mixed green salad.\"\n" + //
+                "      ]\n" + //
+                "    },\n" + //
+                "    {\n" + //
+                "      \"recipeName\": \"Vegetable Fried Rice\",\n" + //
+                "      \"cookingTime\": \"30 minutes\",\n" + //
+                "      \"caloriesAndMacros\": {\n" + //
+                "        \"calories\": \"700\",\n" + //
+                "        \"protein\": \"52g\",\n" + //
+                "        \"carbs\": \"52g\",\n" + //
+                "        \"fat\": \"10g\"\n" + //
+                "      },\n" + //
+                "      \"ingredientsAndQuantities\": [\n" + //
+                "        { \"ingredient\": \"Cooked rice\", \"quantity\": \"1200g\" },\n" + //
+                "        { \"ingredient\": \"Vegetable oil\", \"quantity\": \"2 tbsp\" },\n" + //
+                "        { \"ingredient\": \"Diced chicken (can substitute with tofu for vegetarian option)\", \"quantity\": \"1 cup\" },\n"
+                + //
+                "        { \"ingredient\": \"Diced mixed vegetables (such as bell peppers, carrots, and peas)\", \"quantity\": \"1 cup\" },\n"
+                + //
+                "        { \"ingredient\": \"Cloves garlic, minced\", \"quantity\": \"2\" },\n" + //
+                "        { \"ingredient\": \"Eggs, beaten\", \"quantity\": \"2\" },\n" + //
+                "        { \"ingredient\": \"Soy sauce\", \"quantity\": \"1/4 cup\" }\n" + //
+                "      ],\n" + //
+                "      \"cookingProcess\": [\n" + //
+                "        \"In a large pan or wok, heat the vegetable oil over medium-high heat.\",\n" + //
+                "        \"Add the diced chicken and vegetables, and sauté until the chicken is cooked through and the vegetables are tender.\",\n"
+                + //
+                "        \"Add the minced garlic and cook for an additional minute.\",\n" + //
+                "        \"Push the chicken and vegetables to the side of the pan and pour in the beaten eggs.\",\n" + //
+                "        \"Scramble the eggs until cooked, then mix them in with the chicken and vegetables.\",\n" + //
+                "        \"Add the cooked rice to the pan and stir to combine.\",\n" + //
+                "        \"Pour in the soy sauce and mix well. Cook for a few more minutes until everything is heated through.\",\n"
+                + //
+                "        \"Serve hot as a main dish or side dish.\"\n" + //
+                "      ]\n" + //
+                "    },\n" + //
+                "    // Add more recipes as needed...\n" + //
+                "  ]\n" + //
+                "}\n" + //
+                "";
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
