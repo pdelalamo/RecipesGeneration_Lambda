@@ -191,8 +191,8 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         StringBuilder promptBuilder = new StringBuilder();
 
         // Number of recipes to generate
-        promptBuilder.append(
-                "Please generate 5 recipes, with 4 clearly defined sections (cooking time, calories and macros, ingredients and quantities, and cooking process)");
+        promptBuilder.append(String.format("Please generate 5 recipes, each with the following format: \n%s",
+                this.generateResponseTemplate()));
 
         // Target nutritional goals
         promptBuilder.append(String.format(" with %s %d calories", precision, calories));
@@ -269,8 +269,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         if (occasion != null && !occasion.isEmpty()) {
             promptBuilder.append(String.format(", suitable for %s", occasion));
         }
-        promptBuilder.append(String.format("Please, generate the response following the next example format: %s",
-                this.generateResponseTemplate()));
 
         // Construct the final prompt
         String prompt = promptBuilder.toString();
@@ -315,75 +313,26 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     private String generateResponseTemplate() {
-        return "{\n" + //
-                "  \"recipes\": [\n" + //
-                "    {\n" + //
-                "      \"recipeName\": \"Baked Chicken Parmesan\",\n" + //
-                "      \"cookingTime\": \"30 minutes\",\n" + //
-                "      \"caloriesAndMacros\": {\n" + //
-                "        \"calories\": \"700\",\n" + //
-                "        \"protein\": \"57g\",\n" + //
-                "        \"carbs\": \"51g\",\n" + //
-                "        \"fat\": \"10g\"\n" + //
-                "      },\n" + //
-                "      \"ingredientsAndQuantities\": [\n" + //
-                "        { \"ingredient\": \"Chicken breasts\", \"quantity\": \"730g\" },\n" + //
-                "        { \"ingredient\": \"Rolled oats, blended into flour\", \"quantity\": \"1 cup\" },\n" + //
-                "        { \"ingredient\": \"Grated parmesan cheese\", \"quantity\": \"1/4 cup\" },\n" + //
-                "        { \"ingredient\": \"Egg, beaten\", \"quantity\": \"1\" },\n" + //
-                "        { \"ingredient\": \"Marinara sauce\", \"quantity\": \"1 cup\" },\n" + //
-                "        { \"ingredient\": \"Mozzarella cheese, shredded\", \"quantity\": \"1 cup\" }\n" + //
-                "      ],\n" + //
-                "      \"cookingProcess\": [\n" + //
-                "        \"Preheat the oven to 375°F (190°C) and line a baking sheet with parchment paper.\",\n" + //
-                "        \"In a shallow dish, mix together the oat flour and parmesan cheese.\",\n" + //
-                "        \"Dip each chicken breast in the beaten egg, then coat it with the oat flour mixture.\",\n" + //
-                "        \"Place the coated chicken breasts on the prepared baking sheet and bake for 20 minutes.\",\n"
-                + //
-                "        \"Remove from the oven and top each chicken breast with marinara sauce and shredded mozzarella cheese.\",\n"
-                + //
-                "        \"Bake for an additional 10 minutes, or until the cheese is melted and the chicken is fully cooked.\",\n"
-                + //
-                "        \"Serve hot with a side of your choice, such as brown rice or a mixed green salad.\"\n" + //
-                "      ]\n" + //
-                "    },\n" + //
-                "    {\n" + //
-                "      \"recipeName\": \"Vegetable Fried Rice\",\n" + //
-                "      \"cookingTime\": \"30 minutes\",\n" + //
-                "      \"caloriesAndMacros\": {\n" + //
-                "        \"calories\": \"700\",\n" + //
-                "        \"protein\": \"52g\",\n" + //
-                "        \"carbs\": \"52g\",\n" + //
-                "        \"fat\": \"10g\"\n" + //
-                "      },\n" + //
-                "      \"ingredientsAndQuantities\": [\n" + //
-                "        { \"ingredient\": \"Cooked rice\", \"quantity\": \"1200g\" },\n" + //
-                "        { \"ingredient\": \"Vegetable oil\", \"quantity\": \"2 tbsp\" },\n" + //
-                "        { \"ingredient\": \"Diced chicken (can substitute with tofu for vegetarian option)\", \"quantity\": \"1 cup\" },\n"
-                + //
-                "        { \"ingredient\": \"Diced mixed vegetables (such as bell peppers, carrots, and peas)\", \"quantity\": \"1 cup\" },\n"
-                + //
-                "        { \"ingredient\": \"Cloves garlic, minced\", \"quantity\": \"2\" },\n" + //
-                "        { \"ingredient\": \"Eggs, beaten\", \"quantity\": \"2\" },\n" + //
-                "        { \"ingredient\": \"Soy sauce\", \"quantity\": \"1/4 cup\" }\n" + //
-                "      ],\n" + //
-                "      \"cookingProcess\": [\n" + //
-                "        \"In a large pan or wok, heat the vegetable oil over medium-high heat.\",\n" + //
-                "        \"Add the diced chicken and vegetables, and sauté until the chicken is cooked through and the vegetables are tender.\",\n"
-                + //
-                "        \"Add the minced garlic and cook for an additional minute.\",\n" + //
-                "        \"Push the chicken and vegetables to the side of the pan and pour in the beaten eggs.\",\n" + //
-                "        \"Scramble the eggs until cooked, then mix them in with the chicken and vegetables.\",\n" + //
-                "        \"Add the cooked rice to the pan and stir to combine.\",\n" + //
-                "        \"Pour in the soy sauce and mix well. Cook for a few more minutes until everything is heated through.\",\n"
-                + //
-                "        \"Serve hot as a main dish or side dish.\"\n" + //
-                "      ]\n" + //
-                "    },\n" + //
-                "    // Add more recipes as needed...\n" + //
-                "  ]\n" + //
-                "}\n" + //
-                "";
+        return "{\n" +
+                "  \"recipeName\": \"\",\n" +
+                "  \"cookingTime\": \"\",\n" +
+                "  \"caloriesAndMacros\": {\n" +
+                "    \"calories\": \"\",\n" +
+                "    \"protein\": \"\",\n" +
+                "    \"carbs\": \"\",\n" +
+                "    \"fat\": \"\"\n" +
+                "  },\n" +
+                "  \"ingredientsAndQuantities\": [\n" +
+                "    { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
+                "    { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
+                "    ...\n" +
+                "  ],\n" +
+                "  \"cookingProcess\": [\n" +
+                "    \"Step 1\",\n" +
+                "    \"Step 2\",\n" +
+                "    ...\n" +
+                "  ]\n" +
+                "}\n";
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
