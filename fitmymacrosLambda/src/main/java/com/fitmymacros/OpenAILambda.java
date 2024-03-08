@@ -43,18 +43,18 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
 
-        OPENAI_API_KEY = this.getOpenAIKey();
-        System.out.println("Input event: " + input);
-        System.out.println("Input event toString(): " + input.toString());
-        System.out.println("Input event query params: " + input.getQueryStringParameters());
-        String requestBody = this.generateRequestBody(input.getQueryStringParameters());
-        HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
-
         try {
+            OPENAI_API_KEY = this.getOpenAIKey();
+            System.out.println("Input event: " + input);
+            System.out.println("Input event toString(): " + input.toString());
+            System.out.println("Input event query params: " + input.getQueryStringParameters());
+            String requestBody = this.generateRequestBody(input.getQueryStringParameters());
+            HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
+
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return this.buildSuccessResponse(response.body().toString());
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Exception: " + e.getMessage());
             return this.buildErrorResponse(e.getMessage());
         }
     }
@@ -278,7 +278,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         if (prompt.length() > MAX_PROMPT_LENGTH) {
             prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
         }
-
+        System.out.println("prompt: " + prompt);
         int maxTokens = 3000;
         String modelName = "gpt-3.5-turbo-instruct";
         return String.format("{\"prompt\": \"%s\", \"max_tokens\": %d, \"model\": \"%s\"}", prompt,
