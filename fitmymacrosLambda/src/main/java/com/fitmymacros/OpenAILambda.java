@@ -195,7 +195,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                 this.generateResponseTemplate()));
 
         // Target nutritional goals
-        promptBuilder.append(String.format(" with %s %d calories", precision, calories));
+        promptBuilder.append(String.format(" The recipes should have %s %d calories", precision, calories));
         promptBuilder.append(String.format(", containing %s %d%s of protein", precision, protein, measureUnit));
         promptBuilder.append(String.format(", containing %s %d%s of carbs", precision, protein, measureUnit));
         promptBuilder.append(String.format(", and %s %d%s of fat", precision, fat, measureUnit));
@@ -313,26 +313,27 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     private String generateResponseTemplate() {
-        return "{\n" +
-                "  \"recipeName\": \"\",\n" +
-                "  \"cookingTime\": \"\",\n" +
-                "  \"caloriesAndMacros\": {\n" +
-                "    \"calories\": \"\",\n" +
-                "    \"protein\": \"\",\n" +
-                "    \"carbs\": \"\",\n" +
-                "    \"fat\": \"\"\n" +
-                "  },\n" +
-                "  \"ingredientsAndQuantities\": [\n" +
-                "    { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
-                "    { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
-                "    ...\n" +
-                "  ],\n" +
-                "  \"cookingProcess\": [\n" +
-                "    \"Step 1\",\n" +
-                "    \"Step 2\",\n" +
-                "    ...\n" +
-                "  ]\n" +
-                "}\n";
+        return "a JSON with 4 fields. First field will be a String recipeName, second will be a String cooking time, third will be an inner JSON named caloriesAndMacros, containing 4 fields (calories, protein, carbs and fat), third will be a list, containing JSON structures, and each structure will have fields, the ingredient and the quantity, and the fourth field will be a String named cookingProcess";
+        // return "{\n" +
+        // " \"recipeName\": \"\",\n" +
+        // " \"cookingTime\": \"\",\n" +
+        // " \"caloriesAndMacros\": {\n" +
+        // " \"calories\": \"\",\n" +
+        // " \"protein\": \"\",\n" +
+        // " \"carbs\": \"\",\n" +
+        // " \"fat\": \"\"\n" +
+        // " },\n" +
+        // " \"ingredientsAndQuantities\": [\n" +
+        // " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
+        // " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
+        // " ...\n" +
+        // " ],\n" +
+        // " \"cookingProcess\": [\n" +
+        // " \"Step 1\",\n" +
+        // " \"Step 2\",\n" +
+        // " ...\n" +
+        // " ]\n" +
+        // "}\n";
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
