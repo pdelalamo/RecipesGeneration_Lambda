@@ -191,7 +191,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         StringBuilder promptBuilder = new StringBuilder();
 
         // Number of recipes to generate
-        promptBuilder.append(String.format("Please generate 5 recipes, each with the following format: \n%s",
+        promptBuilder.append(String.format("Please generate 5 recipes, each with the following format: %s",
                 this.generateResponseTemplate()));
 
         // Target nutritional goals
