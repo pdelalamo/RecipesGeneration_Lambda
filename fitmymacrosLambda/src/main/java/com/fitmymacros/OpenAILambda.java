@@ -49,8 +49,9 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             System.out.println("Input event toString(): " + input.toString());
             System.out.println("Input event query params: " + input.getQueryStringParameters());
             String requestBody = this.generateRequestBody(input.getQueryStringParameters());
+            System.out.println("Request body: " + requestBody);
             HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
-
+            System.err.println("I send the request");
             HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return this.buildSuccessResponse(response.body().toString());
         } catch (Exception e) {
