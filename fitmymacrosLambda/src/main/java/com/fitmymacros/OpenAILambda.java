@@ -206,7 +206,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
 
         // Details about available ingredients
         if (!anyIngredientsMode) {
-            promptBuilder.append(", using ingredients available at home:");
+            promptBuilder.append(", using just ingredients available at home:");
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
@@ -308,6 +308,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             e.printStackTrace();
         }
         String recipesText = rootNode.get("choices").get(0).get("text").asText();
+        System.out.println("before decode: " + recipesText);
         responseEvent.setBody(new String(Base64.getDecoder().decode(recipesText)));
         responseEvent.setStatusCode(200);
         return responseEvent;
