@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +18,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.theokanning.openai.completion.CompletionRequest;
+import com.theokanning.openai.service.OpenAiService;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -31,11 +34,11 @@ import software.amazon.awssdk.services.ssm.model.SsmException;
 
 public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private static final String OPENAI_API_ENDPOINT = "https://api.openai.com/v1/completions";
     private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
+    private static final String OPENAI_MODEL_NAME = "OpenAI-Model";
     private final SsmClient ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-    private static String OPENAI_API_KEY;
+    private String OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
+    private String OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
     private static int MAX_PROMPT_LENGTH = 4096;
     private DynamoDbClient dynamoDbClient = DynamoDbClient.builder()
             .region(Region.EU_WEST_3)
@@ -43,41 +46,22 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-
         try {
-            OPENAI_API_KEY = this.getOpenAIKey();
-            System.out.println("Input event: " + input);
-            System.out.println("Input event toString(): " + input.toString());
-            System.out.println("Input event query params: " + input.getQueryStringParameters());
-            String requestBody = this.generateRequestBody(input.getQueryStringParameters());
-            System.out.println("Request body: " + requestBody);
-            HttpRequest request = this.generateHttpRequest(OPENAI_API_KEY, requestBody);
-            System.err.println("I send the request");
-            HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return this.buildSuccessResponse(response.body().toString());
+            String prompt = this.generatePrompt(input.getQueryStringParameters());
+            OpenAiService service = new OpenAiService(this.OPENAI_AI_KEY,
+                    Duration.ofSeconds(50));
+            CompletionRequest completionRequest = CompletionRequest.builder()
+                    .prompt(prompt)
+                    .model(OPENAI_MODEL)
+                    .maxTokens(3000)
+                    .echo(true)
+                    .build();
+            String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText();
+            return this.buildSuccessResponse(openAIResponse.replace(prompt, ""));
         } catch (Exception e) {
             System.out.println("Exception: " + e.getMessage());
             return this.buildErrorResponse(e.getMessage());
         }
-    }
-
-    /**
-     * This method gets the openai key from env variable (if exists) or from the
-     * parameter store
-     * 
-     * @return
-     */
-    private String getOpenAIKey() {
-        String openAiKey;
-
-        // Check if the environment variable is set
-        String envOpenAiKey = System.getenv("OPENAI_API_KEY");
-        if (envOpenAiKey != null && !envOpenAiKey.isEmpty()) {
-            openAiKey = envOpenAiKey;
-        } else {
-            openAiKey = this.getOpenAIKeyFromParameterStore();
-        }
-        return openAiKey;
     }
 
     /**
@@ -103,11 +87,33 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     /**
+     * This method retrieves the clear text value for the openai model from the
+     * parameter store
+     * 
+     * @return
+     */
+    private String getOpenAIModelFromParameterStore() {
+        try {
+            GetParameterRequest parameterRequest = GetParameterRequest.builder()
+                    .name(OPENAI_MODEL_NAME)
+                    .withDecryption(true)
+                    .build();
+
+            GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
+            return parameterResponse.parameter().value();
+
+        } catch (SsmException e) {
+            System.exit(1);
+        }
+        return null;
+    }
+
+    /**
      * This method generates the request body that will be sent to the openai api
      * 
      * @return
      */
-    private String generateRequestBody(Map<String, String> input) {
+    private String generatePrompt(Map<String, String> input) {
         String userId = input.get("userId").toString();
         String measureUnit = input.get("measureUnit").toString();
         int calories = Integer.parseInt(input.get("calories"));
@@ -192,7 +198,8 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         StringBuilder promptBuilder = new StringBuilder();
 
         // Number of recipes to generate
-        promptBuilder.append(String.format("Please generate 5 recipes, each with the following format: %s",
+        promptBuilder.append(String.format(
+                "Please generate 5 recipes, and return the response as JSON array (please, always return a unique valid JSON array, with no title for each element, just valid JSON elements), where each of the recipes is a JSON inside the JSON array. The JSON array must follow this structure:  %s",
                 this.generateResponseTemplate()));
 
         // Target nutritional goals
@@ -285,15 +292,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                 maxTokens, modelName);
     }
 
-    private HttpRequest generateHttpRequest(String openAiKey, String requestBody) {
-        return HttpRequest.newBuilder()
-                .uri(URI.create(OPENAI_API_ENDPOINT))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + openAiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-    }
-
     private APIGatewayProxyResponseEvent buildSuccessResponse(String message) {
         APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
         ObjectMapper objectMapper = new ObjectMapper();
@@ -314,30 +312,51 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     private String generateResponseTemplate() {
-        // return "a JSON with 4 fields. First field will be a String recipeName, second
-        // will be a String cooking time, third will be an inner JSON named
-        // caloriesAndMacros, containing 4 fields (calories, protein, carbs and fat),
-        // third will be a list, containing JSON structures, and each structure will
-        // have fields, the ingredient and the quantity, and the fourth field will be a
-        // String named cookingProcess";
-        return "{" +
-                " \"recipeName\": \"\"," +
-                " \"cookingTime\": \"\"," +
-                " \"caloriesAndMacros\": {" +
-                " \"calories\": \"\"," +
-                " \"protein\": \"\"," +
-                " \"carbs\": \"\"," +
-                " \"fat\": \"\"" +
-                " }," +
-                " \"ingredientsAndQuantities\": [" +
-                " { \"ingredient\": \"\", \"quantity\": \"\" }," +
-                " { \"ingredient\": \"\", \"quantity\": \"\" }" +
-                " ]," +
-                " \"cookingProcess\": [" +
-                " \"Step 1\"," +
-                " \"Step 2\"" +
-                " ]" +
-                "}";
+        return "[\\n"
+                +
+                "{\\n"
+                +
+                " \"recipeName\": \"\",\\n"
+                +
+                " \"cookingTime\": \"\",\\n"
+                +
+                " \"caloriesAndMacros\": {\\n"
+                +
+                " \"calories\": \"\",\\n"
+                +
+                " \"protein\": \"\",\\n"
+                +
+                " \"carbs\": \"\",\\n"
+                +
+                " \"fat\": \"\"\\n"
+                +
+                " },\\n"
+                +
+                " \"ingredientsAndQuantities\": [\\n"
+                +
+                " { \"ingredient\": \"\", \"quantity\": \"\" },\\n"
+                +
+                " { \"ingredient\": \"\", \"quantity\": \"\" }\\n"
+                +
+                " ],\\n"
+                +
+                " \"cookingProcess\": [\\n"
+                +
+                " \"Step 1\",\\n"
+                +
+                " \"Step 2\"\\n"
+                +
+                " ]\\n"
+                +
+                "},\\n"
+                +
+                "."
+                +
+                "."
+                +
+                "."
+                +
+                "]\\n";
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
