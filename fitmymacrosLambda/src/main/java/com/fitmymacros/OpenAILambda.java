@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -307,33 +308,39 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             e.printStackTrace();
         }
         String recipesText = rootNode.get("choices").get(0).get("text").asText();
-        responseEvent.setBody(recipesText);
+        responseEvent.setBody(new String(Base64.getDecoder().decode(recipesText)));
         responseEvent.setStatusCode(200);
         return responseEvent;
     }
 
     private String generateResponseTemplate() {
-        return "a JSON with 4 fields. First field will be a String recipeName, second will be a String cooking time, third will be an inner JSON named caloriesAndMacros, containing 4 fields (calories, protein, carbs and fat), third will be a list, containing JSON structures, and each structure will have fields, the ingredient and the quantity, and the fourth field will be a String named cookingProcess";
-        // return "{\n" +
-        // " \"recipeName\": \"\",\n" +
-        // " \"cookingTime\": \"\",\n" +
-        // " \"caloriesAndMacros\": {\n" +
-        // " \"calories\": \"\",\n" +
-        // " \"protein\": \"\",\n" +
-        // " \"carbs\": \"\",\n" +
-        // " \"fat\": \"\"\n" +
-        // " },\n" +
-        // " \"ingredientsAndQuantities\": [\n" +
-        // " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
-        // " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
-        // " ...\n" +
-        // " ],\n" +
-        // " \"cookingProcess\": [\n" +
-        // " \"Step 1\",\n" +
-        // " \"Step 2\",\n" +
-        // " ...\n" +
-        // " ]\n" +
-        // "}\n";
+        // return "a JSON with 4 fields. First field will be a String recipeName, second
+        // will be a String cooking time, third will be an inner JSON named
+        // caloriesAndMacros, containing 4 fields (calories, protein, carbs and fat),
+        // third will be a list, containing JSON structures, and each structure will
+        // have fields, the ingredient and the quantity, and the fourth field will be a
+        // String named cookingProcess";
+        String jsonTemplate = "{\n" +
+                " \"recipeName\": \"\",\n" +
+                " \"cookingTime\": \"\",\n" +
+                " \"caloriesAndMacros\": {\n" +
+                " \"calories\": \"\",\n" +
+                " \"protein\": \"\",\n" +
+                " \"carbs\": \"\",\n" +
+                " \"fat\": \"\"\n" +
+                " },\n" +
+                " \"ingredientsAndQuantities\": [\n" +
+                " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
+                " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
+                " ...\n" +
+                " ],\n" +
+                " \"cookingProcess\": [\n" +
+                " \"Step 1\",\n" +
+                " \"Step 2\",\n" +
+                " ...\n" +
+                " ]\n" +
+                "}\n";
+        return Base64.getEncoder().encodeToString(jsonTemplate.getBytes());
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
