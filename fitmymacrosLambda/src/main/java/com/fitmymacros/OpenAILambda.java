@@ -59,7 +59,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText();
             return this.buildSuccessResponse(openAIResponse.replace(prompt, ""));
         } catch (Exception e) {
-            System.out.println("Exception: " + e.getMessage());
             return this.buildErrorResponse(e.getMessage());
         }
     }
@@ -294,19 +293,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
 
     private APIGatewayProxyResponseEvent buildSuccessResponse(String message) {
         APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = null;
-        try {
-            rootNode = objectMapper.readTree(message);
-        } catch (JsonMappingException e) {
-            System.out.println("Error parsing response");
-            e.printStackTrace();
-        } catch (JsonProcessingException e) {
-            System.out.println("Error parsing response");
-            e.printStackTrace();
-        }
-        String recipesText = rootNode.get("choices").get(0).get("text").asText();
-        responseEvent.setBody(recipesText);
+        responseEvent.setBody(message);
         responseEvent.setStatusCode(200);
         return responseEvent;
     }
