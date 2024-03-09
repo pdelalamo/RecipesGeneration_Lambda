@@ -308,8 +308,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             e.printStackTrace();
         }
         String recipesText = rootNode.get("choices").get(0).get("text").asText();
-        System.out.println("before decode: " + recipesText);
-        responseEvent.setBody(new String(Base64.getDecoder().decode(recipesText)));
+        responseEvent.setBody(recipesText);
         responseEvent.setStatusCode(200);
         return responseEvent;
     }
@@ -321,27 +320,24 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         // third will be a list, containing JSON structures, and each structure will
         // have fields, the ingredient and the quantity, and the fourth field will be a
         // String named cookingProcess";
-        String jsonTemplate = "{\n" +
-                " \"recipeName\": \"\",\n" +
-                " \"cookingTime\": \"\",\n" +
-                " \"caloriesAndMacros\": {\n" +
-                " \"calories\": \"\",\n" +
-                " \"protein\": \"\",\n" +
-                " \"carbs\": \"\",\n" +
-                " \"fat\": \"\"\n" +
-                " },\n" +
-                " \"ingredientsAndQuantities\": [\n" +
-                " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
-                " { \"ingredient\": \"\", \"quantity\": \"\" },\n" +
-                " ...\n" +
-                " ],\n" +
-                " \"cookingProcess\": [\n" +
-                " \"Step 1\",\n" +
-                " \"Step 2\",\n" +
-                " ...\n" +
-                " ]\n" +
-                "}\n";
-        return Base64.getEncoder().encodeToString(jsonTemplate.getBytes());
+        return "{\\n" +
+                " \"recipeName\": \"\",\\n" +
+                " \"cookingTime\": \"\",\\n" +
+                " \"caloriesAndMacros\": {\\n" +
+                " \"calories\": \"\",\\n" +
+                " \"protein\": \"\",\\n" +
+                " \"carbs\": \"\",\\n" +
+                " \"fat\": \"\"\\n" +
+                " },\\n" +
+                " \"ingredientsAndQuantities\": [\\n" +
+                " { \"ingredient\": \"\", \"quantity\": \"\" },\\n" +
+                " { \"ingredient\": \"\", \"quantity\": \"\" }\\n" +
+                " ],\\n" +
+                " \"cookingProcess\": [\\n" +
+                " \"Step 1\",\\n" +
+                " \"Step 2\"\\n" +
+                " ]\\n" +
+                "}\\n";
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
