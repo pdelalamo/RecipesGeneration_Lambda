@@ -320,24 +320,24 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         // third will be a list, containing JSON structures, and each structure will
         // have fields, the ingredient and the quantity, and the fourth field will be a
         // String named cookingProcess";
-        return "{\\n" +
-                " \"recipeName\": \"\",\\n" +
-                " \"cookingTime\": \"\",\\n" +
-                " \"caloriesAndMacros\": {\\n" +
-                " \"calories\": \"\",\\n" +
-                " \"protein\": \"\",\\n" +
-                " \"carbs\": \"\",\\n" +
-                " \"fat\": \"\"\\n" +
-                " },\\n" +
-                " \"ingredientsAndQuantities\": [\\n" +
-                " { \"ingredient\": \"\", \"quantity\": \"\" },\\n" +
-                " { \"ingredient\": \"\", \"quantity\": \"\" }\\n" +
-                " ],\\n" +
-                " \"cookingProcess\": [\\n" +
-                " \"Step 1\",\\n" +
-                " \"Step 2\"\\n" +
-                " ]\\n" +
-                "}\\n";
+        return "{" +
+                " \"recipeName\": \"\"," +
+                " \"cookingTime\": \"\"," +
+                " \"caloriesAndMacros\": {" +
+                " \"calories\": \"\"," +
+                " \"protein\": \"\"," +
+                " \"carbs\": \"\"," +
+                " \"fat\": \"\"" +
+                " }," +
+                " \"ingredientsAndQuantities\": [" +
+                " { \"ingredient\": \"\", \"quantity\": \"\" }," +
+                " { \"ingredient\": \"\", \"quantity\": \"\" }" +
+                " ]," +
+                " \"cookingProcess\": [" +
+                " \"Step 1\"," +
+                " \"Step 2\"" +
+                " ]" +
+                "}";
     }
 
     private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
