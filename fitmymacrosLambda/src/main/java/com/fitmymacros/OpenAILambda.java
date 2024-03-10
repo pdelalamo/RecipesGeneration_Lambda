@@ -60,6 +60,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                             .build();
                     String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
                             .replace(prompt, "");
+                    System.out.println("openAIResponse: " + openAIResponse);
                     this.putItemInDynamoDB(opId, openAIResponse);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -109,6 +110,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                 .item(itemAttributes)
                 .build();
 
+        System.out.println("I put the item");
         dynamoDbClient.putItem(request);
     }
 
