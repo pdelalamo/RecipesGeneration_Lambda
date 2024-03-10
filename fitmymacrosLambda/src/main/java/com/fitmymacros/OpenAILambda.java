@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -16,6 +18,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.ssm.SsmClient;
@@ -30,7 +33,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     private final SsmClient ssmClient;
     private String OPENAI_AI_KEY;
     private String OPENAI_MODEL;
-    // private static int MAX_PROMPT_LENGTH = 4096;
+    private final String RESULT_TABLE_NAME = "FitMyMacros_OpenAI_Results";
     private final DynamoDbClient dynamoDbClient;
 
     public OpenAILambda() {
@@ -43,20 +46,70 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         try {
-            String prompt = this.generatePrompt(input.getQueryStringParameters());
-            OpenAiService service = new OpenAiService(this.OPENAI_AI_KEY,
-                    Duration.ofSeconds(50));
-            CompletionRequest completionRequest = CompletionRequest.builder()
-                    .prompt(prompt)
-                    .model(OPENAI_MODEL)
-                    .maxTokens(3000)
-                    .echo(true)
-                    .build();
-            String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText();
-            return this.buildSuccessResponse(openAIResponse.replace(prompt, ""));
+            String opId = generateUniqueIdentifier();
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String prompt = generatePrompt(input.getQueryStringParameters());
+                    OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
+                    CompletionRequest completionRequest = CompletionRequest.builder()
+                            .prompt(prompt)
+                            .model(OPENAI_MODEL)
+                            .maxTokens(3000)
+                            .echo(true)
+                            .build();
+                    String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
+                            .replace(prompt, "");
+                    this.putItemInDynamoDB(opId, openAIResponse);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            return buildSuccessResponse(opId);
+
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
+    }
+
+    /**
+     * This method generates an unique idenfifier of the operation, that will be
+     * used as a primary key for storing the result of the openAI call. It's
+     * returned to the user, so that he can use for retrieving the response from
+     * openAI later on
+     * 
+     * @return
+     */
+    private String generateUniqueIdentifier() {
+        return UUID.randomUUID().toString();
+    }
+
+    /**
+     * This method takes the generated opId, and the result of the call to openAI,
+     * and creates and element that will be stored in dynamoDB, for its future
+     * retrieval by another lambda. It creates a ttl attribute, that represents the
+     * current time +5mins, and after that time, dynamoDB will delete the element
+     * from the table
+     * 
+     * @param eventData
+     */
+    private void putItemInDynamoDB(String opId, String openAIResult) {
+        AttributeValue opIdAttributeValue = AttributeValue.builder().s(opId).build();
+        AttributeValue openAIResultAttributeValue = AttributeValue.builder().s(openAIResult).build();
+        AttributeValue ttlAttributeValue = AttributeValue.builder()
+                .s(Long.toString((System.currentTimeMillis() / 1000L) + (5 * 60))).build();
+
+        Map<String, AttributeValue> itemAttributes = new HashMap<>();
+        itemAttributes.put("opId", opIdAttributeValue);
+        itemAttributes.put("openAIResult", openAIResultAttributeValue);
+        itemAttributes.put("ttl", ttlAttributeValue);
+        PutItemRequest request = PutItemRequest.builder()
+                .tableName(this.RESULT_TABLE_NAME)
+                .item(itemAttributes)
+                .build();
+
+        dynamoDbClient.putItem(request);
     }
 
     /**
