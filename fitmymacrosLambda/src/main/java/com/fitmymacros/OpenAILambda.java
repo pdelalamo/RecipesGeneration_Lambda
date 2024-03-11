@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 
 public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private final String TARGET_LAMBDA = "FitMyMacros_OpenAI_Call";
+    private final String TARGET_LAMBDA = "openaicalllambda-stack-OpenAILambdaFunction-arDhAYU1DI4B";
     private final LambdaAsyncClient lambdaAsyncClient;
 
     public OpenAILambda() {
