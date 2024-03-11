@@ -46,43 +46,28 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         try {
-            String opId = generateUniqueIdentifier();
-
-            CompletableFuture.runAsync(() -> {
-                try {
-                    String prompt = generatePrompt(input.getQueryStringParameters());
-                    OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
-                    CompletionRequest completionRequest = CompletionRequest.builder()
-                            .prompt(prompt)
-                            .model(OPENAI_MODEL)
-                            .maxTokens(3000)
-                            .echo(true)
-                            .build();
-                    String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
-                            .replace(prompt, "");
-                    this.putItemInDynamoDB(opId, openAIResponse);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+            String opId = input.getQueryStringParameters().get("opId").toString();
+            try {
+                String prompt = generatePrompt(input.getQueryStringParameters());
+                OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
+                CompletionRequest completionRequest = CompletionRequest.builder()
+                        .prompt(prompt)
+                        .model(OPENAI_MODEL)
+                        .maxTokens(3000)
+                        .echo(true)
+                        .build();
+                String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
+                        .replace(prompt, "");
+                this.putItemInDynamoDB(opId, openAIResponse);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             return buildSuccessResponse(opId);
 
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
-    }
-
-    /**
-     * This method generates an unique idenfifier of the operation, that will be
-     * used as a primary key for storing the result of the openAI call. It's
-     * returned to the user, so that he can use for retrieving the response from
-     * openAI later on
-     * 
-     * @return
-     */
-    private String generateUniqueIdentifier() {
-        return UUID.randomUUID().toString();
     }
 
     /**
