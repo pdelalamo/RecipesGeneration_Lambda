@@ -44,26 +44,22 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
         try {
+            System.out.println("input: " + input);
             String opId = input.getQueryStringParameters().get("opId").toString();
-            try {
-                String prompt = generatePrompt(input.getQueryStringParameters());
-                System.out.println("prompt: " + prompt);
-                OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
-                CompletionRequest completionRequest = CompletionRequest.builder()
-                        .prompt(prompt)
-                        .model(OPENAI_MODEL)
-                        .maxTokens(3000)
-                        .echo(true)
-                        .build();
-                String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
-                        .replace(prompt, "");
-                System.out.println("response: " + openAIResponse);
-                this.putItemInDynamoDB(opId, openAIResponse);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            String prompt = generatePrompt(input.getQueryStringParameters());
+            System.out.println("prompt: " + prompt);
+            OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
+            CompletionRequest completionRequest = CompletionRequest.builder()
+                    .prompt(prompt)
+                    .model(OPENAI_MODEL)
+                    .maxTokens(3000)
+                    .echo(true)
+                    .build();
+            String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
+                    .replace(prompt, "");
+            System.out.println("response: " + openAIResponse);
+            this.putItemInDynamoDB(opId, openAIResponse);
             return buildSuccessResponse(opId);
-
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
