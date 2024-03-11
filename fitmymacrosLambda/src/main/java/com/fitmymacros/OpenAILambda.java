@@ -47,6 +47,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             String opId = input.getQueryStringParameters().get("opId").toString();
             try {
                 String prompt = generatePrompt(input.getQueryStringParameters());
+                System.out.println("prompt: " + prompt);
                 OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
                 CompletionRequest completionRequest = CompletionRequest.builder()
                         .prompt(prompt)
@@ -56,6 +57,7 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                         .build();
                 String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
                         .replace(prompt, "");
+                System.out.println("response: " + openAIResponse);
                 this.putItemInDynamoDB(opId, openAIResponse);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -65,33 +67,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
-    }
-
-    /**
-     * This method takes the generated opId, and the result of the call to openAI,
-     * and creates and element that will be stored in dynamoDB, for its future
-     * retrieval by another lambda. It creates a ttl attribute, that represents the
-     * current time +5mins, and after that time, dynamoDB will delete the element
-     * from the table
-     * 
-     * @param eventData
-     */
-    private void putItemInDynamoDB(String opId, String openAIResult) {
-        AttributeValue opIdAttributeValue = AttributeValue.builder().s(opId).build();
-        AttributeValue openAIResultAttributeValue = AttributeValue.builder().s(openAIResult).build();
-        AttributeValue ttlAttributeValue = AttributeValue.builder()
-                .s(Long.toString((System.currentTimeMillis() / 1000L) + (5 * 60))).build();
-
-        Map<String, AttributeValue> itemAttributes = new HashMap<>();
-        itemAttributes.put("opId", opIdAttributeValue);
-        itemAttributes.put("openAIResult", openAIResultAttributeValue);
-        itemAttributes.put("ttl", ttlAttributeValue);
-        PutItemRequest request = PutItemRequest.builder()
-                .tableName(this.RESULT_TABLE_NAME)
-                .item(itemAttributes)
-                .build();
-
-        dynamoDbClient.putItem(request);
     }
 
     /**
@@ -370,6 +345,34 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                 "."
                 +
                 "]\\n";
+    }
+
+    /**
+     * This method takes the generated opId, and the result of the call to openAI,
+     * and creates and element that will be stored in dynamoDB, for its future
+     * retrieval by another lambda. It creates a ttl attribute, that represents the
+     * current time +5mins, and after that time, dynamoDB will delete the element
+     * from the table
+     * 
+     * @param eventData
+     */
+    private void putItemInDynamoDB(String opId, String openAIResult) {
+        System.out.println("saving item");
+        AttributeValue opIdAttributeValue = AttributeValue.builder().s(opId).build();
+        AttributeValue openAIResultAttributeValue = AttributeValue.builder().s(openAIResult).build();
+        AttributeValue ttlAttributeValue = AttributeValue.builder()
+                .s(Long.toString((System.currentTimeMillis() / 1000L) + (5 * 60))).build();
+
+        Map<String, AttributeValue> itemAttributes = new HashMap<>();
+        itemAttributes.put("opId", opIdAttributeValue);
+        itemAttributes.put("openAIResult", openAIResultAttributeValue);
+        itemAttributes.put("ttl", ttlAttributeValue);
+        PutItemRequest request = PutItemRequest.builder()
+                .tableName(this.RESULT_TABLE_NAME)
+                .item(itemAttributes)
+                .build();
+
+        dynamoDbClient.putItem(request);
     }
 
     private APIGatewayProxyResponseEvent buildSuccessResponse(String message) {
