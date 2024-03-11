@@ -4,8 +4,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -62,7 +60,6 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
             return buildSuccessResponse(opId);
 
         } catch (Exception e) {
