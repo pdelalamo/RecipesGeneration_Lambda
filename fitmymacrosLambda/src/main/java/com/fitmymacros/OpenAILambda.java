@@ -1,5 +1,6 @@
 package com.fitmymacros;
 
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +44,9 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
-            Map<String, String> queryParams = this.parseQueryParams(input.get("querystring").toString());
+            Map<String, Object> queryStringParameters = this.convert(input.get("queryStringParameters"));
+            Map<String, String> queryParams = this
+                    .parseQueryParams(queryStringParameters.get("querystring").toString());
             String opId = queryParams.get("opId");
             String prompt = generatePrompt(queryParams);
             System.out.println("prompt: " + prompt);
@@ -62,6 +65,23 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
+    }
+
+    /**
+     * This method converts the extracted queryStringParameters object into a map
+     * 
+     * @param obj
+     * @return
+     * @throws IllegalAccessException
+     */
+    private Map<String, Object> convert(Object obj) throws IllegalAccessException {
+        Map<String, Object> map = new HashMap<>();
+        Class<?> clazz = obj.getClass();
+        for (Field field : clazz.getDeclaredFields()) {
+            field.setAccessible(true);
+            map.put(field.getName(), field.get(obj));
+        }
+        return map;
     }
 
     /**
