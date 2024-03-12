@@ -57,11 +57,6 @@
       <artifactId>dynamodb</artifactId>
     </dependency>
     <dependency>
-        <groupId>com.amazonaws</groupId>
-        <artifactId>aws-lambda-java-events</artifactId>
-        <version>3.11.4</version>
-    </dependency>
-    <dependency>
         <groupId>com.theokanning.openai-gpt3-java</groupId>
         <artifactId>service</artifactId>
         <version>0.18.2</version>

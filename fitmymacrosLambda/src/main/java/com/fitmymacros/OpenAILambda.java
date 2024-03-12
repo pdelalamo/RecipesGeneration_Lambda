@@ -7,8 +7,6 @@ import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.theokanning.openai.completion.CompletionRequest;
 import com.theokanning.openai.service.OpenAiService;
 
@@ -24,7 +22,7 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import software.amazon.awssdk.services.ssm.model.SsmException;
 
-public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class OpenAILambda implements RequestHandler<Map<String, Object>, Object> {
 
     private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
     private static final String OPENAI_MODEL_NAME = "OpenAI-Model";
@@ -42,11 +40,12 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
     }
 
     @Override
-    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
+    public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
-            String opId = input.getQueryStringParameters().get("opId").toString();
-            String prompt = generatePrompt(input.getQueryStringParameters());
+            Map<String, String> queryParams = this.parseQueryParams(input.get("querystring").toString());
+            String opId = queryParams.get("opId");
+            String prompt = generatePrompt(queryParams);
             System.out.println("prompt: " + prompt);
             OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
             CompletionRequest completionRequest = CompletionRequest.builder()
@@ -59,10 +58,28 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
                     .replace(prompt, "");
             System.out.println("response: " + openAIResponse);
             this.putItemInDynamoDB(opId, openAIResponse);
-            return buildSuccessResponse(opId);
+            return buildSuccessResponse();
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
+    }
+
+    /**
+     * This method converts the String queryParams received in the event, into an
+     * actual map
+     * 
+     * @param input
+     * @return
+     */
+    private Map<String, String> parseQueryParams(String input) {
+        input = input.substring(1, input.length() - 1);
+        String[] pairs = input.split(", ");
+        Map<String, String> map = new HashMap<>();
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            map.put(keyValue[0], keyValue[1]);
+        }
+        return map;
     }
 
     /**
@@ -371,18 +388,15 @@ public class OpenAILambda implements RequestHandler<APIGatewayProxyRequestEvent,
         dynamoDbClient.putItem(request);
     }
 
-    private APIGatewayProxyResponseEvent buildSuccessResponse(String message) {
-        APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
-        responseEvent.setBody(message);
-        responseEvent.setStatusCode(200);
-        return responseEvent;
+    private Map<String, Object> buildSuccessResponse() {
+        Map<String, Object> responseBody = new HashMap<>();
+        responseBody.put("statusCode", 200);
+        responseBody.put("body", "Successfully invoked the lambda asynchronously");
+        return responseBody;
     }
 
-    private APIGatewayProxyResponseEvent buildErrorResponse(String errorMessage) {
-        APIGatewayProxyResponseEvent responseEvent = new APIGatewayProxyResponseEvent();
-        responseEvent.setBody(errorMessage);
-        responseEvent.setStatusCode(500);
-        return responseEvent;
+    private String buildErrorResponse(String errorMessage) {
+        return "Error occurred: " + errorMessage;
     }
 
 }
