@@ -44,8 +44,8 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
-            Map<String, String> queryParams = this.extractQueryString(input);
-            String opId = queryParams.get("opId");
+            Map<String, Object> queryParams = this.extractQueryString(input);
+            String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
             System.out.println("prompt: " + prompt);
             OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
@@ -71,10 +71,10 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @param input
      * @return
      */
-    private Map<String, String> extractQueryString(Map<String, Object> input) {
+    private Map<String, Object> extractQueryString(Map<String, Object> input) {
         Map<String, Object> queryStringMap = (Map<String, Object>) input.get("queryStringParameters");
         if (queryStringMap != null) {
-            Map<String, String> querystring = (Map<String, String>) queryStringMap.get("querystring");
+            Map<String, Object> querystring = (Map<String, Object>) queryStringMap.get("querystring");
             if (querystring != null) {
                 System.out.println("Query String Map: " + querystring);
                 return querystring;
@@ -137,21 +137,21 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * 
      * @return
      */
-    private String generatePrompt(Map<String, String> input) {
+    private String generatePrompt(Map<String, Object> input) {
         String userId = input.get("userId").toString();
         String measureUnit = input.get("measureUnit").toString();
-        int calories = Integer.parseInt(input.get("calories"));
-        int protein = Integer.parseInt(input.get("protein"));
-        int carbs = Integer.parseInt(input.get("carbs"));
-        int fat = Integer.parseInt(input.get("fat"));
+        int calories = Integer.parseInt(input.get("calories").toString());
+        int protein = Integer.parseInt(input.get("protein").toString());
+        int carbs = Integer.parseInt(input.get("carbs").toString());
+        int fat = Integer.parseInt(input.get("fat").toString());
         String satietyLevel = input.get("satietyLevel").toString();
         String precision = input.get("precision").toString(); // exact grams of protein, carbs and fat, or slight
                                                               // variation?
-        boolean anyIngredientsMode = Boolean.parseBoolean(input.get("anyIngredientsMode"));
-        boolean expandIngredients = Boolean.parseBoolean(input.get("expandIngredients"));
-        boolean glutenFree = Boolean.parseBoolean(input.get("glutenFree"));
-        boolean vegan = Boolean.parseBoolean(input.get("vegan"));
-        boolean vegetarian = Boolean.parseBoolean(input.get("vegetarian"));
+        boolean anyIngredientsMode = Boolean.parseBoolean(input.get("anyIngredientsMode").toString());
+        boolean expandIngredients = Boolean.parseBoolean(input.get("expandIngredients").toString());
+        boolean glutenFree = Boolean.parseBoolean(input.get("glutenFree").toString());
+        boolean vegan = Boolean.parseBoolean(input.get("vegan").toString());
+        boolean vegetarian = Boolean.parseBoolean(input.get("vegetarian").toString());
         String cuisineStyle = input.get("cuisineStyle").toString();
         String cookingTime = input.get("cookingTime").toString();
         String flavor = input.get("flavor").toString();
