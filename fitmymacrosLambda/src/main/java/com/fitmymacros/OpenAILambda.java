@@ -44,9 +44,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
-            Map<String, Object> queryStringParameters = this.convert(input.get("queryStringParameters"));
-            Map<String, String> queryParams = this
-                    .parseQueryParams(queryStringParameters.get("querystring").toString());
+            Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId");
             String prompt = generatePrompt(queryParams);
             System.out.println("prompt: " + prompt);
@@ -68,38 +66,19 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     }
 
     /**
-     * This method converts the extracted queryStringParameters object into a map
-     * 
-     * @param obj
-     * @return
-     * @throws IllegalAccessException
-     */
-    private Map<String, Object> convert(Object obj) throws IllegalAccessException {
-        Map<String, Object> map = new HashMap<>();
-        Class<?> clazz = obj.getClass();
-        for (Field field : clazz.getDeclaredFields()) {
-            field.setAccessible(true);
-            map.put(field.getName(), field.get(obj));
-        }
-        return map;
-    }
-
-    /**
-     * This method converts the String queryParams received in the event, into an
-     * actual map
+     * This method extracts the query params from the received event
      * 
      * @param input
      * @return
      */
-    private Map<String, String> parseQueryParams(String input) {
-        input = input.substring(1, input.length() - 1);
-        String[] pairs = input.split(", ");
-        Map<String, String> map = new HashMap<>();
-        for (String pair : pairs) {
-            String[] keyValue = pair.split("=");
-            map.put(keyValue[0], keyValue[1]);
+    private Map<String, String> extractQueryString(Map<String, Object> input) {
+        Map<String, Object> queryStringParameters = (Map<String, Object>) input.get("queryStringParameters");
+        Map<String, Object> querystring = (Map<String, Object>) queryStringParameters.get("querystring");
+        Map<String, String> queryStringMap = new HashMap<>();
+        for (Map.Entry<String, Object> entry : querystring.entrySet()) {
+            queryStringMap.put(entry.getKey(), entry.getValue().toString());
         }
-        return map;
+        return queryStringMap;
     }
 
     /**
