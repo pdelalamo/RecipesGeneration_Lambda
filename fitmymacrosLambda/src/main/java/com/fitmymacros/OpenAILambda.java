@@ -72,13 +72,19 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @return
      */
     private Map<String, String> extractQueryString(Map<String, Object> input) {
-        Map<String, Object> queryStringParameters = (Map<String, Object>) input.get("queryStringParameters");
-        Map<String, Object> querystring = (Map<String, Object>) queryStringParameters.get("querystring");
-        Map<String, String> queryStringMap = new HashMap<>();
-        for (Map.Entry<String, Object> entry : querystring.entrySet()) {
-            queryStringMap.put(entry.getKey(), entry.getValue().toString());
+        Map<String, Object> queryStringMap = (Map<String, Object>) input.get("queryStringParameters");
+        if (queryStringMap != null) {
+            Map<String, String> queryString = new HashMap<>();
+            for (Map.Entry<String, Object> entry : queryStringMap.entrySet()) {
+                if (entry.getValue() instanceof String) {
+                    queryString.put(entry.getKey(), (String) entry.getValue());
+                }
+            }
+            System.out.println("queryString: " + queryString);
+            return queryString;
+        } else {
+            return null;
         }
-        return queryStringMap;
     }
 
     /**
