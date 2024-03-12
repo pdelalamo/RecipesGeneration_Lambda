@@ -44,7 +44,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
-            Map<String, Object> queryParams = this.extractQueryString(input);
+            Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
             System.out.println("prompt: " + prompt);
@@ -71,21 +71,42 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @param input
      * @return
      */
-    private Map<String, Object> extractQueryString(Map<String, Object> input) {
+    private Map<String, String> extractQueryString(Map<String, Object> input) {
         Map<String, Object> queryStringMap = (Map<String, Object>) input.get("queryStringParameters");
         if (queryStringMap != null) {
-            Map<String, Object> querystring = (Map<String, Object>) queryStringMap.get("querystring");
-            if (querystring != null) {
-                System.out.println("Query String Map: " + querystring);
-                return querystring;
+            String queryString = (String) queryStringMap.get("querystring");
+            if (queryString != null) {
+                return parseQueryString(queryString);
             } else {
                 System.out.println("No query string parameters found.");
-                return null;
             }
         } else {
             System.out.println("No queryStringParameters found.");
-            return null;
         }
+        return null;
+    }
+
+    /**
+     * This method converts a String into a Map
+     * 
+     * @param queryString
+     * @return
+     */
+    private Map<String, String> parseQueryString(String queryString) {
+        System.out.println("queryString: " + queryString);
+        Map<String, String> queryMap = new HashMap<>();
+        if (queryString.substring(0).equalsIgnoreCase("{")
+                && queryString.substring(queryString.length() - 1).equalsIgnoreCase("}"))
+            queryString = queryString.substring(1, queryString.length() - 1);
+        String[] pairs = queryString.split(", ");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            if (keyValue.length == 2) {
+                queryMap.put(keyValue[0], keyValue[1]);
+            }
+        }
+        System.out.println("queryMap: " + queryMap);
+        return queryMap;
     }
 
     /**
@@ -137,7 +158,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * 
      * @return
      */
-    private String generatePrompt(Map<String, Object> input) {
+    private String generatePrompt(Map<String, String> input) {
         String userId = input.get("userId").toString();
         String measureUnit = input.get("measureUnit").toString();
         int calories = Integer.parseInt(input.get("calories").toString());
