@@ -277,7 +277,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         // Details about available ingredients
         if (!anyIngredientsMode) {
             promptBuilder.append(
-                    ". You can just use my ingredients available at home, which are provided in the following list, with their maximum quantity that can be used (please don't forget that the recipe should follow the calories and macros provided before):");
+                    ". You can only use the ingredients available at home, with their maximum quantity that can be used:");
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
@@ -379,13 +379,13 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                 +
                 " },\\n"
                 +
-                " \"ingredientsAndQuantities\": [\\n"
+                " \"ingredientsAndQuantities\": {\\n"
                 +
-                " { \"ingredient name\": \"\", \"ingredient quantity\": \"\" },\\n"
+                "  \"ingredient name\": \"\", \"ingredient quantity\": \"\" ,\\n"
                 +
-                " { \"ingredient name\": \"\", \"ingredient quantity\": \"\" }\\n"
+                "  \"ingredient name\": \"\", \"ingredient quantity\": \"\" \\n"
                 +
-                " ],\\n"
+                " },\\n"
                 +
                 " \"cookingProcess\": [\\n"
                 +
