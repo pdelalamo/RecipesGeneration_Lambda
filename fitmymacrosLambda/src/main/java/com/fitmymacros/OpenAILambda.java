@@ -1,6 +1,5 @@
 package com.fitmymacros;
 
-import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -349,6 +348,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         // if (prompt.length() > MAX_PROMPT_LENGTH) {
         // prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
         // }
+        System.out.println("Prompt: " + prompt);
         return prompt;
     }
 
