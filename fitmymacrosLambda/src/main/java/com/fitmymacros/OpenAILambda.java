@@ -261,14 +261,13 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         // Number of recipes to generate
         promptBuilder.append(String.format(
-                "Please generate 5 recipes, and return the response as JSON array (please, always return a unique valid JSON array, with no title for each element, just valid JSON elements), where each of the recipes is a JSON inside the JSON array. The JSON array must follow this structure:  %s",
+                "Generate 5 recipes and return the response as a JSON array. Each recipe should be a JSON object following this structure: %s",
                 this.generateResponseTemplate()));
 
         // Target nutritional goals
-        promptBuilder.append(String.format(" The recipes should have %s %d calories", precision, calories));
-        promptBuilder.append(String.format(", containing %s %d%s of protein", precision, protein, measureUnit));
-        promptBuilder.append(String.format(", containing %s %d%s of carbs", precision, protein, measureUnit));
-        promptBuilder.append(String.format(", and %s %d%s of fat", precision, fat, measureUnit));
+        promptBuilder.append(
+                String.format(" Recipes should have %s %d calories, %d %s of protein, %d% s of carbs and %d %s of fat",
+                        precision, calories, protein, measureUnit, carbs, measureUnit, fat, measureUnit));
 
         // Desired satiety level
         promptBuilder.append(String.format(", ensuring they are %s", satietyLevel));
@@ -276,7 +275,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         // Details about available ingredients
         if (!anyIngredientsMode) {
             promptBuilder.append(
-                    ". You can only use the ingredients available at home, with their maximum quantity that can be used:");
+                    ". You can only include the following ingredients available at home:");
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
@@ -316,11 +315,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             }
         }
 
-        // Expand ingredients option
-        if (expandIngredients) {
-            promptBuilder.append(", allowing for additional ingredients as needed");
-        }
-
         // Cuisine style
         if (cuisineStyle != null && !cuisineStyle.isEmpty()) {
             promptBuilder.append(String.format(", with a focus on %s cuisine", cuisineStyle));
@@ -328,17 +322,17 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         // Cooking time
         if (cookingTime != null && !cookingTime.isEmpty()) {
-            promptBuilder.append(String.format(", with a cooking time of %s", cookingTime));
+            promptBuilder.append(String.format(", a cooking time of %s", cookingTime));
         }
 
         // Flavor profile
         if (flavor != null && !flavor.isEmpty()) {
-            promptBuilder.append(String.format(", with a %s flavor profile", flavor));
+            promptBuilder.append(String.format(", a %s flavor profile", flavor));
         }
 
         // Occasion
         if (occasion != null && !occasion.isEmpty()) {
-            promptBuilder.append(String.format(", suitable for %s", occasion));
+            promptBuilder.append(String.format(", and suitable for %s", occasion));
         }
 
         // Construct the final prompt
