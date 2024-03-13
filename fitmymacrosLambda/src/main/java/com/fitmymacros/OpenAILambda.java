@@ -95,16 +95,34 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private Map<String, String> parseQueryString(String queryString) {
         System.out.println("queryString: " + queryString);
         Map<String, String> queryMap = new HashMap<>();
-        if (queryString.substring(0).equalsIgnoreCase("{")
-                && queryString.substring(queryString.length() - 1).equalsIgnoreCase("}"))
+
+        // Remove leading and trailing braces if present
+        if (queryString.startsWith("{") && queryString.endsWith("}")) {
             queryString = queryString.substring(1, queryString.length() - 1);
+        }
+
+        // Split the string by comma and space
         String[] pairs = queryString.split(", ");
+
         for (String pair : pairs) {
             String[] keyValue = pair.split("=");
             if (keyValue.length == 2) {
-                queryMap.put(keyValue[0], keyValue[1]);
+                String key = keyValue[0];
+                String value = keyValue[1];
+
+                // Handle boolean values
+                if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
+                    queryMap.put(key, value);
+                } else {
+                    // For non-boolean values, put the key-value pair in the map
+                    queryMap.put(key, value);
+                }
+            } else if (keyValue.length == 1) {
+                // If there's no '=', treat the whole string as a key with a value of "true"
+                queryMap.put(keyValue[0], "true");
             }
         }
+
         System.out.println("queryMap: " + queryMap);
         return queryMap;
     }
