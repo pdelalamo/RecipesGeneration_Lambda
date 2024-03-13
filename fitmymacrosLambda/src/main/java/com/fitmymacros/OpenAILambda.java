@@ -419,7 +419,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         AttributeValue opIdAttributeValue = AttributeValue.builder().s(opId).build();
         AttributeValue openAIResultAttributeValue = AttributeValue.builder().s(openAIResult).build();
         AttributeValue ttlAttributeValue = AttributeValue.builder()
-                .s(Long.toString((System.currentTimeMillis() / 1000L) + (5 * 60))).build();
+                .n(Long.toString((System.currentTimeMillis() / 1000L) + (5 * 60))).build();
 
         Map<String, AttributeValue> itemAttributes = new HashMap<>();
         itemAttributes.put("opId", opIdAttributeValue);
