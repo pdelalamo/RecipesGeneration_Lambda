@@ -60,6 +60,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             this.putItemInDynamoDB(opId, openAIResponse);
             return buildSuccessResponse();
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return this.buildErrorResponse(e.getMessage());
         }
     }
@@ -275,7 +276,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         // Details about available ingredients
         if (!anyIngredientsMode) {
             promptBuilder.append(
-                    ". You can only include the following ingredients available at home:");
+                    ". You can only include the following ingredients available at home: ");
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
