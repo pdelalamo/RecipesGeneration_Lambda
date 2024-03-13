@@ -267,7 +267,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         // Target nutritional goals
         promptBuilder.append(
-                String.format(" Recipes should have %s %d calories, %d %s of protein, %d% s of carbs and %d %s of fat",
+                String.format(" Recipes should have %s %d calories, %d %s of protein, %d% %s of carbs and %d %s of fat",
                         precision, calories, protein, measureUnit, carbs, measureUnit, fat, measureUnit));
 
         // Desired satiety level
