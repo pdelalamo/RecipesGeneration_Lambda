@@ -1,15 +1,21 @@
 package com.fitmymacros;
 
-import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.HttpStatusCode;
+
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.theokanning.openai.completion.CompletionRequest;
-import com.theokanning.openai.service.OpenAiService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fitmymacros.model.ChatCompletionResponse;
+import com.fitmymacros.model.ChatCompletionResponseChoice;
 
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -26,41 +32,71 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
     private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
     private static final String OPENAI_MODEL_NAME = "OpenAI-Model";
+    private static final String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
     private final SsmClient ssmClient;
     private String OPENAI_AI_KEY;
     private String OPENAI_MODEL;
+    private Double MODEL_TEMPERATURE;
     private final String RESULT_TABLE_NAME = "FitMyMacros_OpenAI_Results";
     private final DynamoDbClient dynamoDbClient;
+    private ObjectMapper objectMapper;
+    private WebClient webClient;
+    private final String URL = "https://api.openai.com/v1/chat/completions";
 
     public OpenAILambda() {
         ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
         this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
         this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
         this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
+        this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
+        objectMapper = new ObjectMapper();
+        webClient = WebClient.create();
     }
 
     @Override
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
-            System.out.println("input: " + input);
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
-            System.out.println("prompt: " + prompt);
-            OpenAiService service = new OpenAiService(OPENAI_AI_KEY, Duration.ofSeconds(50));
-            CompletionRequest completionRequest = CompletionRequest.builder()
-                    .prompt(prompt)
-                    .model(OPENAI_MODEL)
-                    .maxTokens(3000)
-                    .echo(true)
-                    .build();
-            String openAIResponse = service.createCompletion(completionRequest).getChoices().get(0).getText()
-                    .replace(prompt, "");
-            System.out.println("response: " + openAIResponse);
-            this.putItemInDynamoDB(opId, openAIResponse);
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", this.OPENAI_MODEL);
+            requestBody.put("messages", Arrays.asList(
+                    Map.of("role", "system",
+                            "content", this.generateSystemInstructions()),
+                    Map.of("role", "user",
+                            "content", prompt)));
+            requestBody.put("max_tokens", 10000);
+            requestBody.put("temperature", MODEL_TEMPERATURE);
+
+            Mono<ChatCompletionResponse> completionResponseMono = webClient.post()
+                    .uri(URL)
+                    .headers(httpHeaders -> {
+                        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+                        httpHeaders.setBearerAuth(OPENAI_AI_KEY);
+                    })
+                    .bodyValue(objectMapper.writeValueAsString(requestBody))
+                    .exchangeToMono(clientResponse -> {
+                        HttpStatusCode httpStatus = clientResponse.statusCode();
+                        if (httpStatus.is2xxSuccessful()) {
+                            return clientResponse.bodyToMono(ChatCompletionResponse.class);
+                        } else {
+                            Mono<String> stringMono = clientResponse.bodyToMono(String.class);
+                            stringMono.subscribe(s -> {
+                                System.out.println("Response from Open AI API " + s);
+                            });
+                            System.err.println("Error occurred while invoking Open AI API");
+                            return Mono.error(new Exception(
+                                    "Error occurred while generating wordage"));
+                        }
+                    });
+            ChatCompletionResponse completionResponse = completionResponseMono.block();
+            List<ChatCompletionResponseChoice> choices = completionResponse.getChoices();
+            ChatCompletionResponseChoice aChoice = choices.get(0);
+            this.putItemInDynamoDB(opId, aChoice.getMessage().getContent());
             return buildSuccessResponse();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
             return this.buildErrorResponse(e.getMessage());
         }
     }
@@ -172,6 +208,29 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     }
 
     /**
+     * This method retrieves the clear value for the openai temperature to use from
+     * the
+     * parameter store
+     * 
+     * @return
+     */
+    private Double getTemperatureFromParameterStore() {
+        try {
+            GetParameterRequest parameterRequest = GetParameterRequest.builder()
+                    .name(OPENAI_MODEL_TEMPERATURE)
+                    .withDecryption(true)
+                    .build();
+
+            GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
+            return Double.valueOf(parameterResponse.parameter().value());
+
+        } catch (SsmException e) {
+            System.exit(1);
+        }
+        return null;
+    }
+
+    /**
      * This method generates the prompt that will be sent to the openai api
      * 
      * @return
@@ -260,14 +319,10 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         StringBuilder promptBuilder = new StringBuilder();
 
-        // Number of recipes to generate
-        promptBuilder.append(String.format(
-                "Generate 5 recipes and return the response as a JSON array. Each recipe should be a JSON object following this structure: %s",
-                this.generateResponseTemplate()));
-
         // Target nutritional goals
         promptBuilder.append(
-                String.format(" Recipes should have %s %d calories, %d %s of protein, %d %s of carbs and %d %s of fat",
+                String.format(
+                        "Generate 2 recipes. Each recipe should have %s %d calories, %d %s of protein, %d %s of carbs and %d %s of fat",
                         precision, calories, protein, measureUnit, carbs, measureUnit, fat, measureUnit));
 
         // Desired satiety level
@@ -323,7 +378,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         // Cooking time
         if (cookingTime != null && !cookingTime.isEmpty()) {
-            promptBuilder.append(String.format(", a cooking time of %s", cookingTime));
+            promptBuilder.append(String.format(", a maximum cooking time of %s", cookingTime));
         }
 
         // Flavor profile
@@ -337,68 +392,71 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         }
 
         // Construct the final prompt
-        String prompt = promptBuilder.toString();
-
-        // Limit the maximum length of the prompt to avoid exceeding OpenAI's limits
-        // if (prompt.length() > MAX_PROMPT_LENGTH) {
-        // prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
-        // }
-        System.out.println("Prompt: " + prompt);
-        return prompt;
+        return promptBuilder.toString();
     }
 
     /**
-     * This method returns a String representation of the desired format for the
-     * response generated by openAI
+     * This method creates the instructions that define the format that the model
+     * must use for returning the response
      * 
      * @return
      */
-    private String generateResponseTemplate() {
-        return "[\\n"
-                +
-                "{\\n"
-                +
-                " \"recipeName\": \"\",\\n"
-                +
-                " \"cookingTime\": \"\",\\n"
-                +
-                " \"caloriesAndMacros\": {\\n"
-                +
-                " \"calories\": \"\",\\n"
-                +
-                " \"protein\": \"\",\\n"
-                +
-                " \"carbs\": \"\",\\n"
-                +
-                " \"fat\": \"\"\\n"
-                +
-                " },\\n"
-                +
-                " \"ingredientsAndQuantities\": {\\n"
-                +
-                "  \"ingredient name\": \"\", \"ingredient quantity\": \"\" ,\\n"
-                +
-                "  \"ingredient name\": \"\", \"ingredient quantity\": \"\" \\n"
-                +
-                " },\\n"
-                +
-                " \"cookingProcess\": [\\n"
-                +
-                " \"Step 1\",\\n"
-                +
-                " \"Step 2\"\\n"
-                +
-                " ]\\n"
-                +
-                "},\\n"
-                +
-                "."
-                +
-                "."
-                +
-                "."
-                +
-                "]\\n";
+    private String generateSystemInstructions() {
+        return "You are a helpful assistant, that generates responses that just contain a JSON array, where each of the elements follows this structure: \"{\\\\n"
+                + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"recipeName\\\": \\\"\\\",\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"cookingTime\\\": \\\"\\\",\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"caloriesAndMacros\": {\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"calories (the calories from the generated recipe)\\\": \\\"\\\",\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"protein (the protein from the generated recipe)\\\": \\\"\\\",\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"carbs  (the carbs from the generated recipe)\\\": \\\"\\\",\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"fat  (the fat from the generated recipe)\\\": \\\"\\\"\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" },\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"ingredientsAndQuantities\\\": {\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \"  \\\"ingredient name\\\": \\\"\\\", \\\"ingredient quantity\\\": \\\"\\\" ,\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \"  \\\"ingredient name\\\": \\\"\\\", \\\"ingredient quantity\\\": \\\"\\\" \\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" },\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"cookingProcess\\\": [\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"Step 1\\\",\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" \\\"Step 2\\\"\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \" ]\\\\n" + //
+                "\"\n" + //
+                "                +\n" + //
+                "                \"}\\\\n" + //
+                "\"\n" + //
+                "";
     }
 
     /**
