@@ -178,11 +178,13 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .name(OPENAI_API_KEY_NAME)
                     .withDecryption(true)
                     .build();
-
+            System.out.println("key request ");
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
+            System.out.println("openai key: " + parameterResponse.parameter().value());
             return parameterResponse.parameter().value();
 
         } catch (SsmException e) {
+            System.out.println("SSM Error: " + e.getMessage());
             System.exit(1);
         }
         return null;
@@ -201,10 +203,13 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .withDecryption(true)
                     .build();
 
+            System.out.println("model request ");
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
+            System.out.println("model: " + parameterResponse.parameter().value());
             return parameterResponse.parameter().value();
 
         } catch (SsmException e) {
+            System.out.println("SSM Error: " + e.getMessage());
             System.exit(1);
         }
         return null;
@@ -224,6 +229,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .withDecryption(true)
                     .build();
 
+            System.out.println("temperature request ");
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
             System.out.println("temperature: " + parameterResponse.parameter().value());
             return Double.valueOf(parameterResponse.parameter().value());
