@@ -225,9 +225,11 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .build();
 
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
+            System.out.println("temperature: " + parameterResponse.parameter().value());
             return Double.valueOf(parameterResponse.parameter().value());
 
         } catch (SsmException e) {
+            System.out.println("SSM Error: " + e.getMessage());
             System.exit(1);
         }
         return null;
