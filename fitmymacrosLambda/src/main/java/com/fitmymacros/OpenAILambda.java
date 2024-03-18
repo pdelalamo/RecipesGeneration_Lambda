@@ -56,6 +56,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     @Override
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
+            System.out.println("input: " + input);
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
@@ -318,6 +319,12 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             String satietyLevel, boolean anyIngredientsMode, boolean expandIngredients, boolean glutenFree,
             boolean vegan, boolean vegetarian, String cuisineStyle, String cookingTime, String flavor,
             String occasion, Map<String, AttributeValue> userData) {
+
+        for (Map.Entry<String, AttributeValue> entry : userData.entrySet()) {
+            String key = entry.getKey();
+            AttributeValue value = entry.getValue();
+            System.out.println("entry: " + key + ": " + value.toString());
+        }
 
         StringBuilder promptBuilder = new StringBuilder();
 
