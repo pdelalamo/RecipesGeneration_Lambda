@@ -457,7 +457,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                 "                +\n" + //
                 "                \"}\\\\n" + //
                 "\"\n" + //
-                "";
+                ". It's so important that the ingredients and quantities you provide, exactly fit the calories and macros provided in the prompt. Each ingredient is measured uncooked and dry.";
     }
 
     /**
