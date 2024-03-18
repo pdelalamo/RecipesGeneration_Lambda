@@ -30,9 +30,9 @@ import software.amazon.awssdk.services.ssm.model.SsmException;
 
 public class OpenAILambda implements RequestHandler<Map<String, Object>, Object> {
 
-    private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
-    private static final String OPENAI_MODEL_NAME = "OpenAI-Model";
-    private static final String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
+    private static String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
+    private static String OPENAI_MODEL_NAME = "OpenAI-Model";
+    private static String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
     private final SsmClient ssmClient;
     private String OPENAI_AI_KEY;
     private String OPENAI_MODEL;
@@ -41,7 +41,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private final DynamoDbClient dynamoDbClient;
     private ObjectMapper objectMapper;
     private WebClient webClient;
-    private final String URL = "https://api.openai.com/v1/chat/completions";
+    private String URL = "https://api.openai.com/v1/chat/completions";
 
     public OpenAILambda() {
         ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
@@ -70,6 +70,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             requestBody.put("max_tokens", 10000);
             requestBody.put("temperature", MODEL_TEMPERATURE);
 
+            System.out.println("URL: " + URL);
             Mono<ChatCompletionResponse> completionResponseMono = webClient.post()
                     .uri(URL)
                     .headers(httpHeaders -> {
