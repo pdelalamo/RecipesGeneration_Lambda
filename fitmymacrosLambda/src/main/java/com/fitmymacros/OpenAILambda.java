@@ -59,6 +59,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
+            System.out.println("Prompt: " + prompt);
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", this.OPENAI_MODEL);
@@ -87,7 +88,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                             stringMono.subscribe(s -> {
                                 System.out.println("Response from Open AI API " + s);
                             });
-                            System.err.println("Error occurred while invoking Open AI API");
+                            System.out.println("Error occurred while invoking Open AI API");
                             return Mono.error(new Exception(
                                     "Error occurred while generating wordage"));
                         }
@@ -337,6 +338,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
                 int foodQuantity = Integer.parseInt(entry.getValue().n());
+                System.out.println("ingredient: " + foodName + "quantity: " + foodQuantity);
                 promptBuilder.append(String.format(", %dg of %s", foodQuantity, foodName));
             }
         }
