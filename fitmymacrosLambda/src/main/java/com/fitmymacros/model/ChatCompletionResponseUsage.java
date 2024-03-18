@@ -1,4 +1,4 @@
-package com.model;
+package com.fitmymacros.model;
 
 public class ChatCompletionResponseUsage {
     Integer promptTokens;
