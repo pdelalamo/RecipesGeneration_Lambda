@@ -6,7 +6,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       Handler: com.fitmymacros.OpenAILambda::handleRequest
-      Runtime: java11
+      Runtime: java17
       CodeUri: target/openAILambda-jar-with-dependencies.jar
       Policies:
         - AWSLambdaBasicExecutionRole
