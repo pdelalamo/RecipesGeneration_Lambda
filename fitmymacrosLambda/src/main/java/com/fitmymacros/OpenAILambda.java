@@ -39,8 +39,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private Double MODEL_TEMPERATURE;
     private final String RESULT_TABLE_NAME = "FitMyMacros_OpenAI_Results";
     private final DynamoDbClient dynamoDbClient;
-    private ObjectMapper objectMapper;
-    private WebClient webClient;
     private String URL = "https://api.openai.com/v1/chat/completions";
 
     public OpenAILambda() {
@@ -49,14 +47,15 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
         this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
         this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
-        objectMapper = new ObjectMapper();
-        webClient = WebClient.create();
     }
 
     @Override
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
+            ObjectMapper objectMapper = new ObjectMapper();
+            WebClient webClient = WebClient.create();
+
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
