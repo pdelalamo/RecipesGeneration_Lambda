@@ -45,8 +45,8 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
     public OpenAILambda() {
         this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
-        this.objectMapper = new ObjectMapper();
-        this.webClient = WebClient.create();
+        // this.objectMapper = new ObjectMapper();
+        // this.webClient = WebClient.create();
     }
 
     @Override
