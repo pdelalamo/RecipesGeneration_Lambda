@@ -56,11 +56,9 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     @Override
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
-            System.out.println("input: " + input);
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
-            System.out.println("Prompt: " + prompt);
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", this.OPENAI_MODEL);
@@ -72,7 +70,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             requestBody.put("max_tokens", 10000);
             requestBody.put("temperature", MODEL_TEMPERATURE);
 
-            System.out.println("URL: " + URL);
             Mono<ChatCompletionResponse> completionResponseMono = webClient.post()
                     .uri(URL)
                     .headers(httpHeaders -> {
@@ -132,7 +129,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @return
      */
     private Map<String, String> parseQueryString(String queryString) {
-        System.out.println("queryString: " + queryString);
         Map<String, String> queryMap = new HashMap<>();
 
         // Remove leading and trailing braces if present
@@ -162,7 +158,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             }
         }
 
-        System.out.println("queryMap: " + queryMap);
         return queryMap;
     }
 
@@ -178,9 +173,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .name(OPENAI_API_KEY_NAME)
                     .withDecryption(true)
                     .build();
-            System.out.println("key request ");
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            System.out.println("openai key: " + parameterResponse.parameter().value());
             return parameterResponse.parameter().value();
 
         } catch (SsmException e) {
@@ -203,9 +196,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .withDecryption(true)
                     .build();
 
-            System.out.println("model request ");
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            System.out.println("model: " + parameterResponse.parameter().value());
             return parameterResponse.parameter().value();
 
         } catch (SsmException e) {
@@ -229,9 +220,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .withDecryption(true)
                     .build();
 
-            System.out.println("temperature request ");
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            System.out.println("temperature: " + parameterResponse.parameter().value());
             return Double.valueOf(parameterResponse.parameter().value());
 
         } catch (SsmException e) {
@@ -328,12 +317,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             boolean vegan, boolean vegetarian, String cuisineStyle, String cookingTime, String flavor,
             String occasion, Map<String, AttributeValue> userData) {
 
-        for (Map.Entry<String, AttributeValue> entry : userData.entrySet()) {
-            String key = entry.getKey();
-            AttributeValue value = entry.getValue();
-            System.out.println("entry: " + key + ": " + value.toString());
-        }
-
         StringBuilder promptBuilder = new StringBuilder();
 
         // Target nutritional goals
@@ -353,7 +336,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
                 int foodQuantity = Integer.parseInt(entry.getValue().n());
-                System.out.println("ingredient: " + foodName + "quantity: " + foodQuantity);
                 promptBuilder.append(String.format(", %dg of %s", foodQuantity, foodName));
             }
         }
@@ -487,7 +469,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @param eventData
      */
     private void putItemInDynamoDB(String opId, String openAIResult) {
-        System.out.println("saving item");
         AttributeValue opIdAttributeValue = AttributeValue.builder().s(opId).build();
         AttributeValue openAIResultAttributeValue = AttributeValue.builder().s(openAIResult).build();
         AttributeValue ttlAttributeValue = AttributeValue.builder()
