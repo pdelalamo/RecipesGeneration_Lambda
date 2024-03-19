@@ -44,13 +44,14 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private WebClient webClient;
 
     public OpenAILambda() {
-        this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
-        this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
+        // this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
+        // this.dynamoDbClient =
+        // DynamoDbClient.builder().region(Region.EU_WEST_3).build();
         this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
         this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
-        // this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
-        // objectMapper = new ObjectMapper();
-        // webClient = WebClient.create();
+        this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
+        objectMapper = new ObjectMapper();
+        webClient = WebClient.create();
     }
 
     @Override
