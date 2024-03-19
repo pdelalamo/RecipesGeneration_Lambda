@@ -33,17 +33,18 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private static String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
     private static String OPENAI_MODEL_NAME = "OpenAI-Model";
     private static String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
-    private final SsmClient ssmClient;
+    private SsmClient ssmClient;
     private String OPENAI_AI_KEY;
     private String OPENAI_MODEL;
     private Double MODEL_TEMPERATURE;
     private final String RESULT_TABLE_NAME = "FitMyMacros_OpenAI_Results";
-    private final DynamoDbClient dynamoDbClient;
+    private DynamoDbClient dynamoDbClient;
     private String URL = "https://api.openai.com/v1/chat/completions";
 
     public OpenAILambda() {
-        ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
-        this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
+        // ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
+        // this.dynamoDbClient =
+        // DynamoDbClient.builder().region(Region.EU_WEST_3).build();
         // this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
         // this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
         // this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
@@ -53,6 +54,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
+            dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
             ObjectMapper objectMapper = new ObjectMapper();
             WebClient webClient = WebClient.create();
 
