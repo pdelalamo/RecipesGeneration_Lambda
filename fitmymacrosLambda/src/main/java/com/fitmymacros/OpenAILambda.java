@@ -33,7 +33,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private static String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
     private static String OPENAI_MODEL_NAME = "OpenAI-Model";
     private static String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
-    private final SsmClient ssmClient;
+    private SsmClient ssmClient;
     private String OPENAI_AI_KEY;
     private String OPENAI_MODEL;
     private Double MODEL_TEMPERATURE;
@@ -44,11 +44,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private WebClient webClient;
 
     public OpenAILambda() {
-        this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
         this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
-        this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
-        this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
-        this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
         this.objectMapper = new ObjectMapper();
         this.webClient = WebClient.create();
     }
@@ -57,6 +53,10 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
+            this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
+            this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
+            this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
+            this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
