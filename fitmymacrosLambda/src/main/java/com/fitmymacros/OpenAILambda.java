@@ -40,27 +40,23 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private final String RESULT_TABLE_NAME = "FitMyMacros_OpenAI_Results";
     private DynamoDbClient dynamoDbClient;
     private String URL = "https://api.openai.com/v1/chat/completions";
-    // private ObjectMapper objectMapper;
-    // private WebClient webClient;
+    private ObjectMapper objectMapper;
+    private WebClient webClient;
 
     public OpenAILambda() {
-        // this.dynamoDbClient =
-        // DynamoDbClient.builder().region(Region.EU_WEST_3).build();
-        // this.objectMapper = new ObjectMapper();
-        // this.webClient = WebClient.create();
+        this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
+        this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
+        this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
+        this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
+        this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
+        this.objectMapper = new ObjectMapper();
+        this.webClient = WebClient.create();
     }
 
     @Override
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             System.out.println("input: " + input);
-            this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
-            this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
-            this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
-            this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
-            this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
-            ObjectMapper objectMapper = new ObjectMapper();
-            WebClient webClient = WebClient.create();
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);

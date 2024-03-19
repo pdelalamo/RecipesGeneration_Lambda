@@ -1,8 +1,8 @@
 package com.fitmymacros.model;
 
 public class ChatCompletionResponseChoiceMessage {
-    String role;
-    String content;
+    private String role;
+    private String content;
 
     public String getRole() {
         return role;

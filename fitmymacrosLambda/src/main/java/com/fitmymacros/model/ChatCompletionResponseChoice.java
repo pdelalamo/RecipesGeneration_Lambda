@@ -1,9 +1,9 @@
 package com.fitmymacros.model;
 
 public class ChatCompletionResponseChoice {
-    ChatCompletionResponseChoiceMessage message;
-    Integer index;
-    String finishReason;
+    private ChatCompletionResponseChoiceMessage message;
+    private Integer index;
+    private String finishReason;
 
     public ChatCompletionResponseChoiceMessage getMessage() {
         return message;

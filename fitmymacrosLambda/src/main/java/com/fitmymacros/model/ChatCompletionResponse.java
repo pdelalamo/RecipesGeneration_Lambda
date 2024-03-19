@@ -3,12 +3,12 @@ package com.fitmymacros.model;
 import java.util.List;
 
 public class ChatCompletionResponse {
-    String id;
-    String object;
-    Long createdOn;
-    String model;
-    List<ChatCompletionResponseChoice> choices;
-    ChatCompletionResponseUsage usage;
+    private String id;
+    private String object;
+    private Long createdOn;
+    private String model;
+    private List<ChatCompletionResponseChoice> choices;
+    private ChatCompletionResponseUsage usage;
 
     public String getId() {
         return id;
