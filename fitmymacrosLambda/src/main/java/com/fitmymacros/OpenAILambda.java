@@ -374,11 +374,11 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         if (!recipeList.isEmpty()) {
             promptBuilder.append("If possible, create recipes that heavily differ from:");
             System.out.println("recipeList: " + recipeList);
-            for (AttributeValue recipe : recipeList) {
-                String recipeName = recipe.m().get("S").s();
+            recipeList.forEach(recipe -> {
+                String recipeName = recipe.s();
                 System.out.println("recipe: " + recipeName);
                 promptBuilder.append(String.format(" %s,", recipeName));
-            }
+            });
             // Remove trailing comma
             promptBuilder.deleteCharAt(promptBuilder.length() - 1);
         }
@@ -389,7 +389,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         if (!allergiesList.isEmpty()) {
             promptBuilder.append(", avoiding ingredients such as");
             for (AttributeValue allergy : allergiesList) {
-                String allergyName = allergy.m().get("S").s();
+                String allergyName = allergy.s();
                 promptBuilder.append(String.format(" %s,", allergyName));
             }
             // Remove trailing comma
