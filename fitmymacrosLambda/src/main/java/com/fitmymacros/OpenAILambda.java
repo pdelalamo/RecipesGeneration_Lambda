@@ -364,15 +364,21 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
-                int foodQuantity = Integer.parseInt(entry.getValue().n());
-                promptBuilder.append(String.format(", %dg of %s", foodQuantity, foodName));
+                AttributeValue quantityAttr = entry.getValue();
+                if (quantityAttr.n() != null) { // Check if it's a number
+                    int foodQuantity = Integer.parseInt(quantityAttr.n());
+                    promptBuilder.append(String.format(", %dg of %s", foodQuantity, foodName));
+                } else if (quantityAttr.s() != null) { // Check if it's a string
+                    String foodQuantityString = quantityAttr.s();
+                    promptBuilder.append(String.format(", %s of %s", foodQuantityString, foodName));
+                }
             }
         }
 
         // previous 10 generated recipes
         List<AttributeValue> recipeList = userData.get("previous_recipes").l();
         if (!recipeList.isEmpty()) {
-            promptBuilder.append("If possible, create recipes that heavily differ from:");
+            promptBuilder.append(". If possible, create recipes that heavily differ in ingredients and flavour from:");
             System.out.println("recipeList: " + recipeList);
             recipeList.forEach(recipe -> {
                 String recipeName = recipe.s();
