@@ -248,6 +248,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .build();
 
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
+            System.out.println("max tokens: " + parameterResponse);
             return Integer.valueOf(parameterResponse.parameter().value());
 
         } catch (SsmException e) {
@@ -370,6 +371,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         // previous 10 generated recipes
         promptBuilder.append("If possible, create recipes that heavily differ from:");
         List<AttributeValue> recipeList = userData.get("previous_recipes").l();
+        System.out.println("recipeList: " + recipeList);
         recipeList.forEach(recipe -> {
             String recipeName = recipe.m().get("S").s();
             promptBuilder.append(String.format(" %s,", recipeName));
