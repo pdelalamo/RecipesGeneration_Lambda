@@ -374,11 +374,11 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         if (!recipeList.isEmpty()) {
             promptBuilder.append("If possible, create recipes that heavily differ from:");
             System.out.println("recipeList: " + recipeList);
-            recipeList.forEach(recipe -> {
+            for (AttributeValue recipe : recipeList) {
                 String recipeName = recipe.m().get("S").s();
                 System.out.println("recipe: " + recipeName);
                 promptBuilder.append(String.format(" %s,", recipeName));
-            });
+            }
             // Remove trailing comma
             promptBuilder.deleteCharAt(promptBuilder.length() - 1);
         }
