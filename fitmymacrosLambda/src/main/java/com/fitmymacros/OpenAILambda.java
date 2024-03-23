@@ -62,6 +62,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             Map<String, String> queryParams = this.extractQueryString(input);
             String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
+            System.out.println("prompt: " + prompt);
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", this.OPENAI_MODEL);
@@ -369,13 +370,17 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         }
 
         // previous 10 generated recipes
-        promptBuilder.append("If possible, create recipes that heavily differ from:");
         List<AttributeValue> recipeList = userData.get("previous_recipes").l();
-        System.out.println("recipeList: " + recipeList);
-        recipeList.forEach(recipe -> {
-            String recipeName = recipe.m().get("S").s();
-            promptBuilder.append(String.format(" %s,", recipeName));
-        });
+        if (!recipeList.isEmpty()) {
+            promptBuilder.append("If possible, create recipes that heavily differ from:");
+            System.out.println("recipeList: " + recipeList);
+            recipeList.forEach(recipe -> {
+                String recipeName = recipe.m().get("S").s();
+                promptBuilder.append(String.format(" %s,", recipeName));
+            });
+            // Remove trailing comma
+            promptBuilder.deleteCharAt(promptBuilder.length() - 1);
+        }
 
         // Exclude any allergens or intolerances
         List<AttributeValue> allergiesList = userData.get("allergies-intolerances").l();
