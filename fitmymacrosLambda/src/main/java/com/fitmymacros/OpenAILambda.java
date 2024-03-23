@@ -376,6 +376,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             System.out.println("recipeList: " + recipeList);
             recipeList.forEach(recipe -> {
                 String recipeName = recipe.m().get("S").s();
+                System.out.println("recipe: " + recipeName);
                 promptBuilder.append(String.format(" %s,", recipeName));
             });
             // Remove trailing comma
@@ -384,6 +385,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         // Exclude any allergens or intolerances
         List<AttributeValue> allergiesList = userData.get("allergies-intolerances").l();
+        System.out.println("allergies: " + allergiesList);
         if (!allergiesList.isEmpty()) {
             promptBuilder.append(", avoiding ingredients such as");
             for (AttributeValue allergy : allergiesList) {
