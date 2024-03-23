@@ -370,7 +370,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     promptBuilder.append(String.format(", %dg of %s", foodQuantity, foodName));
                 } else if (quantityAttr.s() != null) { // Check if it's a string
                     String foodQuantityString = quantityAttr.s();
-                    promptBuilder.append(String.format(", %s of %s", foodQuantityString, foodName));
+                    promptBuilder.append(String.format(", %s %s", foodQuantityString, foodName));
                 }
             }
         }
