@@ -371,7 +371,8 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         promptBuilder.append("If possible, create recipes that heavily differ from:");
         List<AttributeValue> recipeList = userData.get("previous_recipes").l();
         recipeList.forEach(recipe -> {
-            promptBuilder.append(String.format(" %s,", recipe.toString()));
+            String recipeName = recipe.m().get("S").s();
+            promptBuilder.append(String.format(" %s,", recipeName));
         });
 
         // Exclude any allergens or intolerances
