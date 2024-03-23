@@ -248,7 +248,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     .build();
 
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            System.out.println("max tokens: " + parameterResponse);
             return Integer.valueOf(parameterResponse.parameter().value());
 
         } catch (SsmException e) {
@@ -345,6 +344,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             boolean vegan, boolean vegetarian, String cuisineStyle, String cookingTime, String flavor,
             String occasion, Map<String, AttributeValue> userData) {
 
+        System.out.println("userData: " + userData);
         StringBuilder promptBuilder = new StringBuilder();
 
         // Target nutritional goals
