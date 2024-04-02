@@ -20,7 +20,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.ssm.SsmClient;
@@ -39,7 +38,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     private String OPENAI_MODEL;
     private Double MODEL_TEMPERATURE;
     private Integer MODEL_MAX_TOKENS;
-    private final String RESULT_TABLE_NAME = "FitMyMacros_OpenAI_Results";
     private DynamoDbClient dynamoDbClient;
     private String URL = "https://api.openai.com/v1/chat/completions";
     private ObjectMapper objectMapper;
@@ -60,7 +58,6 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
             Map<String, String> queryParams = this.extractQueryString(input);
-            String opId = queryParams.get("opId").toString();
             String prompt = generatePrompt(queryParams);
             System.out.println("prompt: " + prompt);
 
@@ -98,8 +95,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             ChatCompletionResponse completionResponse = completionResponseMono.block();
             List<ChatCompletionResponseChoice> choices = completionResponse.getChoices();
             ChatCompletionResponseChoice aChoice = choices.get(0);
-            this.putItemInDynamoDB(opId, aChoice.getMessage().getContent());
-            return buildSuccessResponse();
+            return buildSuccessResponse(this.parseJsonArray(aChoice.getMessage().getContent()));
         } catch (Exception e) {
             return this.buildErrorResponse(e.getMessage());
         }
@@ -351,11 +347,11 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         // Target nutritional goals
         promptBuilder.append(
                 String.format(
-                        "Generate 2 recipes. Each recipe should have %s %d calories, %d %s of protein, %d %s of carbs and %d %s of fat",
+                        "Give me the name of 5 recipes.",
                         precision, calories, protein, measureUnit, carbs, measureUnit, fat, measureUnit));
 
         // Desired satiety level
-        promptBuilder.append(String.format(", ensuring they are %s", satietyLevel));
+        promptBuilder.append(String.format("Ensure they are %s", satietyLevel));
 
         // Details about available ingredients
         if (!anyIngredientsMode) {
@@ -452,89 +448,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @return
      */
     private String generateSystemInstructions() {
-        return "You are a helpful assistant, that generates responses that just contain a JSON array, where each of the elements follows this structure: \"{\\\\n"
-                + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"recipeName\\\": \\\"\\\",\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"cookingTime\\\": \\\"\\\",\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"caloriesAndMacros\": {\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"calories (the calories from the generated recipe)\\\": \\\"\\\",\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"protein (the protein from the generated recipe)\\\": \\\"\\\",\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"carbs  (the carbs from the generated recipe)\\\": \\\"\\\",\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"fat  (the fat from the generated recipe)\\\": \\\"\\\"\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" },\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"ingredientsAndQuantities\\\": {\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \"  \\\"ingredient name\\\": \\\"\\\", \\\"ingredient quantity\\\": \\\"\\\" ,\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \"  \\\"ingredient name\\\": \\\"\\\", \\\"ingredient quantity\\\": \\\"\\\" \\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" },\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"cookingProcess\\\": [\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"Step 1\\\",\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" \\\"Step 2\\\"\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \" ]\\\\n" + //
-                "\"\n" + //
-                "                +\n" + //
-                "                \"}\\\\n" + //
-                "\"\n" + //
-                ". It's so important that the ingredients and quantities you provide, exactly fit the calories and macros provided in the prompt. Each ingredient is measured uncooked and dry.";
-    }
-
-    /**
-     * This method takes the generated opId, and the result of the call to openAI,
-     * and creates and element that will be stored in dynamoDB, for its future
-     * retrieval by another lambda. It creates a ttl attribute, that represents the
-     * current time +5mins, and after that time, dynamoDB will delete the element
-     * from the table
-     * 
-     * @param eventData
-     */
-    private void putItemInDynamoDB(String opId, String openAIResult) {
-        AttributeValue opIdAttributeValue = AttributeValue.builder().s(opId).build();
-        String parsedJsonAraay = this.parseJsonArray(openAIResult);
-        AttributeValue openAIResultAttributeValue = AttributeValue.builder().s(parsedJsonAraay).build();
-        AttributeValue ttlAttributeValue = AttributeValue.builder()
-                .n(Long.toString((System.currentTimeMillis() / 1000L) + (5 * 60))).build();
-
-        Map<String, AttributeValue> itemAttributes = new HashMap<>();
-        itemAttributes.put("opId", opIdAttributeValue);
-        itemAttributes.put("openAIResult", openAIResultAttributeValue);
-        itemAttributes.put("ttl", ttlAttributeValue);
-        PutItemRequest request = PutItemRequest.builder()
-                .tableName(this.RESULT_TABLE_NAME)
-                .item(itemAttributes)
-                .build();
-
-        dynamoDbClient.putItem(request);
+        return "You're a helpful assistant, that returns recipes names as a list like: [recipe1, recipe2...]";
     }
 
     /**
@@ -555,10 +469,10 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         }
     }
 
-    private Map<String, Object> buildSuccessResponse() {
+    private Map<String, Object> buildSuccessResponse(String response) {
         Map<String, Object> responseBody = new HashMap<>();
         responseBody.put("statusCode", 200);
-        responseBody.put("body", "Successfully invoked the lambda asynchronously");
+        responseBody.put("body", response);
         return responseBody;
     }
 
