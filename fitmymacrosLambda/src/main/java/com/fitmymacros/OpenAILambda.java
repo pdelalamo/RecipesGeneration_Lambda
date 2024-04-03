@@ -448,7 +448,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @return
      */
     private String generateSystemInstructions() {
-        return "You're a helpful assistant, that returns recipes names as a list like: [recipe1, recipe2...]";
+        return "You're a helpful assistant, that just returns recipes names as an array with this format: [recipe1, recipe2...]";
     }
 
     /**
