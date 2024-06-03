@@ -261,31 +261,36 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
      * @return
      */
     private String generatePrompt(Map<String, String> input) {
-        String userId = input.get("userId").toString();
-        String measureUnit = input.get("measureUnit").toString();
-        int calories = Integer.parseInt(input.get("calories").toString());
-        int protein = Integer.parseInt(input.get("protein").toString());
-        int carbs = Integer.parseInt(input.get("carbs").toString());
-        int fat = Integer.parseInt(input.get("fat").toString());
-        String satietyLevel = input.get("satietyLevel").toString();
-        String precision = input.get("precision").toString(); // exact grams of protein, carbs and fat, or slight
-                                                              // variation?
-        boolean anyIngredientsMode = Boolean.parseBoolean(input.get("anyIngredientsMode").toString());
-        boolean expandIngredients = Boolean.parseBoolean(input.get("expandIngredients").toString());
-        boolean glutenFree = Boolean.parseBoolean(input.get("glutenFree").toString());
-        boolean vegan = Boolean.parseBoolean(input.get("vegan").toString());
-        boolean vegetarian = Boolean.parseBoolean(input.get("vegetarian").toString());
-        String cuisineStyle = input.get("cuisineStyle").toString();
-        String cookingTime = input.get("cookingTime").toString();
-        String flavor = input.get("flavor").toString();
-        String occasion = input.get("occasion").toString();
+        try {
+            String userId = input.get("userId").toString();
+            String measureUnit = input.get("measureUnit").toString();
+            int calories = Integer.parseInt(input.get("calories").toString());
+            int protein = Integer.parseInt(input.get("protein").toString());
+            int carbs = Integer.parseInt(input.get("carbs").toString());
+            int fat = Integer.parseInt(input.get("fat").toString());
+            String satietyLevel = input.get("satietyLevel").toString();
+            String precision = input.get("precision").toString(); // exact grams of protein, carbs and fat, or slight
+                                                                  // variation?
+            boolean anyIngredientsMode = Boolean.parseBoolean(input.get("anyIngredientsMode").toString());
+            boolean expandIngredients = Boolean.parseBoolean(input.get("expandIngredients").toString());
+            boolean glutenFree = Boolean.parseBoolean(input.get("glutenFree").toString());
+            boolean vegan = Boolean.parseBoolean(input.get("vegan").toString());
+            boolean vegetarian = Boolean.parseBoolean(input.get("vegetarian").toString());
+            String cuisineStyle = input.get("cuisineStyle").toString();
+            String cookingTime = input.get("cookingTime").toString();
+            String flavor = input.get("flavor").toString();
+            String occasion = input.get("occasion").toString();
 
-        QueryResponse queryResponse = this.getUserData(userId);
-        Map<String, AttributeValue> userData = queryResponse.items().get(0);
-        return this.createPrompt(precision, measureUnit, calories, protein, carbs, fat, satietyLevel,
-                anyIngredientsMode,
-                expandIngredients, glutenFree, vegan, vegetarian, cuisineStyle, cookingTime, flavor, occasion,
-                userData);
+            QueryResponse queryResponse = this.getUserData(userId);
+            Map<String, AttributeValue> userData = queryResponse.items().get(0);
+            return this.createPrompt(precision, measureUnit, calories, protein, carbs, fat, satietyLevel,
+                    anyIngredientsMode,
+                    expandIngredients, glutenFree, vegan, vegetarian, cuisineStyle, cookingTime, flavor, occasion,
+                    userData);
+        } catch (Exception e) {
+            System.out.println("Error while deserializing input params: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
