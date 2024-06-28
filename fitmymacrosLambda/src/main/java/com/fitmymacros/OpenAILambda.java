@@ -388,8 +388,10 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         }
 
         // previous 10 generated recipes
-        List<AttributeValue> recipeList = userData.get("previous_recipes").l();
-        if (!recipeList.isEmpty()) {
+        List<AttributeValue> recipeList = userData.get("previous_recipes") != null
+                ? userData.get("previous_recipes").l()
+                : new ArrayList<>();
+        if (recipeList != null && !recipeList.isEmpty()) {
             promptBuilder.append(". If possible, create recipes that heavily differ in ingredients and flavour from:");
             System.out.println("recipeList: " + recipeList);
             recipeList.forEach(recipe -> {
@@ -402,7 +404,9 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
         }
 
         // Exclude any allergens or intolerances
-        List<AttributeValue> allergiesList = userData.get("allergies-intolerances").l();
+        List<AttributeValue> allergiesList = userData.get("allergies-intolerances") != null
+                ? userData.get("allergies-intolerances").l()
+                : new ArrayList<>();
         System.out.println("allergies: " + allergiesList);
         if (!allergiesList.isEmpty()) {
             promptBuilder.append(", avoiding ingredients such as");
