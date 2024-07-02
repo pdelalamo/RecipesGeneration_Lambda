@@ -469,6 +469,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     }
 
     public void printUserData(Map<String, AttributeValue> userData) {
+        System.out.println("Entering printUserData");
         for (Map.Entry<String, AttributeValue> entry : userData.entrySet()) {
             String key = entry.getKey();
             AttributeValue value = entry.getValue();
