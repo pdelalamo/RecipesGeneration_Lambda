@@ -370,6 +370,7 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             String weightMeasureUnit = userData.get("weightUnit").s();
             promptBuilder.append(
                     ". You can only include the following ingredients available at home: ");
+            printUserData(userData);
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
@@ -465,6 +466,36 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
 
         // Construct the final prompt
         return promptBuilder.toString();
+    }
+
+    public void printUserData(Map<String, AttributeValue> userData) {
+        for (Map.Entry<String, AttributeValue> entry : userData.entrySet()) {
+            String key = entry.getKey();
+            AttributeValue value = entry.getValue();
+
+            // Determine the type of the AttributeValue and print it accordingly
+            if (value.s() != null) {
+                System.out.println(key + ": " + value.s());
+            } else if (value.n() != null) {
+                System.out.println(key + ": " + value.n());
+            } else if (value.bool() != null) {
+                System.out.println(key + ": " + value.bool());
+            } else if (value.l() != null) {
+                System.out.println(key + ": " + value.l());
+            } else if (value.m() != null) {
+                System.out.println(key + ": {");
+                printUserData(value.m());
+                System.out.println("}");
+            } else if (value.ss() != null) {
+                System.out.println(key + ": " + value.ss());
+            } else if (value.ns() != null) {
+                System.out.println(key + ": " + value.ns());
+            } else if (value.bs() != null) {
+                System.out.println(key + ": " + value.bs());
+            } else {
+                System.out.println(key + ": (unknown type)");
+            }
+        }
     }
 
     /**
