@@ -363,14 +363,15 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                         precision, calories, protein, measureUnit, carbs, measureUnit, fat, measureUnit));
 
         // Desired satiety level
-        promptBuilder.append(String.format("Ensure they are %s", satietyLevel));
+        if (satietyLevel.equalsIgnoreCase("satiating") || satietyLevel.equalsIgnoreCase("non satiating"))
+            promptBuilder.append(String.format("Ensure they are %s", satietyLevel));
 
         // Details about available ingredients
         if (!anyIngredientsMode) {
             String weightMeasureUnit = userData.get("weightUnit").s();
             promptBuilder.append(
                     ". You can only include the following ingredients available at home: ");
-            printUserData(userData);
+            // printUserData(userData);
             Map<String, AttributeValue> foodMap = userData.get("food").m();
             for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
                 String foodName = entry.getKey();
@@ -380,10 +381,10 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
                     promptBuilder.append(String.format(", %d units of %s", foodQuantity, foodName));
                 } else if (quantityAttr.n() != null) { // Check if it's a number
                     int foodQuantity = Integer.parseInt(quantityAttr.n());
-                    promptBuilder.append(String.format(", %d%s of %s", foodQuantity, weightMeasureUnit, foodName));
+                    promptBuilder.append(String.format(", %d%s of %s", foodQuantity, measureUnit, foodName));
                 } else if (quantityAttr.s() != null) { // Check if it's a string
                     String foodQuantityString = quantityAttr.s();
-                    promptBuilder.append(String.format(", %s %s", foodQuantityString, foodName));
+                    promptBuilder.append(String.format(", %s%s %s", foodQuantityString, measureUnit, foodName));
                 }
             }
         }
