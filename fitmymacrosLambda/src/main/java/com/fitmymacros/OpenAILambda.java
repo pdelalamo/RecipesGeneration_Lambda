@@ -1,21 +1,19 @@
 package com.fitmymacros;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.http.HttpStatusCode;
-
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitmymacros.model.ChatCompletionResponse;
 import com.fitmymacros.model.ChatCompletionResponseChoice;
-
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -30,32 +28,38 @@ import software.amazon.awssdk.services.ssm.model.SsmException;
 
 public class OpenAILambda implements RequestHandler<Map<String, Object>, Object> {
 
-    private static String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
-    private static String OPENAI_MODEL_NAME = "OpenAI-Model";
-    private static String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
-    private static String OPENAI_MAX_TOKENS = "OpenAI-Max-Tokens";
-    private SsmClient ssmClient;
-    private String OPENAI_AI_KEY;
-    private String OPENAI_MODEL;
-    private Double MODEL_TEMPERATURE;
-    private Integer MODEL_MAX_TOKENS;
-    private DynamoDbClient dynamoDbClient;
-    private String URL = "https://api.openai.com/v1/chat/completions";
-    private ObjectMapper objectMapper;
-    private WebClient webClient;
-    private static List<String> fruitUnits = new ArrayList<>(Arrays.asList(
-            "Apple", "Banana", "Orange", "Peach", "Kiwi", "Pear", "Cherry", "Plum", "Apricot", "Papaya", "Avocado",
-            "Grapefruit", "Lemon", "Lime", "Tangerine", "Cantaloupe", "Honeydew melon", "Nectarine", "Persimmon",
-            "Dragon fruit", "Jackfruit", "Star fruit", "Ackee", "Plantain", "Coconut", "Mangosteen", "Feijoa",
-            "Kumquat", "Pummelo", "Satsuma", "Ugli fruit"));
+    private static final String OPENAI_API_KEY_NAME = "OpenAI-API_Key_Encrypted";
+    private static final String OPENAI_MODEL_NAME = "OpenAI-Model";
+    private static final String OPENAI_MODEL_TEMPERATURE = "OpenAI-Model-Temperature";
+    private static final String OPENAI_MAX_TOKENS = "OpenAI-Max-Tokens";
+    private static final String URL = "https://api.openai.com/v1/chat/completions";
+    
+    private final SsmClient ssmClient;
+    private final DynamoDbClient dynamoDbClient;
+    private final ObjectMapper objectMapper;
+    private final WebClient webClient;
+    
+    private final String openAIApiKey;
+    private final String openAIModel;
+    private final Double modelTemperature;
+    private final Integer modelMaxTokens;
+    
+    private static final List<String> FRUIT_UNITS = List.of(
+            "Apple", "Banana", "Orange", "Peach", "Kiwi", "Pear", 
+            "Cherry", "Plum", "Apricot", "Papaya", "Avocado", 
+            "Grapefruit", "Lemon", "Lime", "Tangerine", "Cantaloupe", 
+            "Honeydew melon", "Nectarine", "Persimmon", "Dragon fruit", 
+            "Jackfruit", "Star fruit", "Ackee", "Plantain", "Coconut", 
+            "Mangosteen", "Feijoa", "Kumquat", "Pummelo", "Satsuma", "Ugli fruit");
 
     public OpenAILambda() {
-        this.ssmClient = SsmClient.builder().region(Region.EU_WEST_3).build();
-        this.dynamoDbClient = DynamoDbClient.builder().region(Region.EU_WEST_3).build();
-        this.OPENAI_AI_KEY = this.getOpenAIKeyFromParameterStore();
-        this.OPENAI_MODEL = this.getOpenAIModelFromParameterStore();
-        this.MODEL_TEMPERATURE = this.getTemperatureFromParameterStore();
-        this.MODEL_MAX_TOKENS = this.getMaxTokensFromParameterStore();
+        Region region = Region.EU_WEST_3;
+        this.ssmClient = SsmClient.builder().region(region).build();
+        this.dynamoDbClient = DynamoDbClient.builder().region(region).build();
+        this.openAIApiKey = getParameterValue(OPENAI_API_KEY_NAME);
+        this.openAIModel = getParameterValue(OPENAI_MODEL_NAME);
+        this.modelTemperature = Double.valueOf(getParameterValue(OPENAI_MODEL_TEMPERATURE));
+        this.modelMaxTokens = Integer.valueOf(getParameterValue(OPENAI_MAX_TOKENS));
         this.objectMapper = new ObjectMapper();
         this.webClient = WebClient.create();
     }
@@ -63,56 +67,20 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
     @Override
     public Object handleRequest(Map<String, Object> input, Context context) {
         try {
-            Map<String, String> queryParams = this.extractQueryString(input);
-            System.out.println("input: " + input);
+            Map<String, String> queryParams = extractQueryString(input);
             String prompt = generatePrompt(queryParams);
-            System.out.println("prompt: " + prompt);
-
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", this.OPENAI_MODEL);
-            requestBody.put("messages", Arrays.asList(
-                    Map.of("role", "system",
-                            "content", this.generateSystemInstructions()),
-                    Map.of("role", "user",
-                            "content", prompt)));
-            requestBody.put("max_tokens", this.MODEL_MAX_TOKENS);
-            requestBody.put("temperature", MODEL_TEMPERATURE);
-
-            Mono<ChatCompletionResponse> completionResponseMono = webClient.post()
-                    .uri(URL)
-                    .headers(httpHeaders -> {
-                        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-                        httpHeaders.setBearerAuth(OPENAI_AI_KEY);
-                    })
-                    .bodyValue(objectMapper.writeValueAsString(requestBody))
-                    .exchangeToMono(clientResponse -> {
-                        HttpStatusCode httpStatus = clientResponse.statusCode();
-                        if (httpStatus.is2xxSuccessful()) {
-                            return clientResponse.bodyToMono(ChatCompletionResponse.class);
-                        } else {
-                            Mono<String> stringMono = clientResponse.bodyToMono(String.class);
-                            stringMono.subscribe(s -> {
-                                System.out.println("Response from Open AI API " + s);
-                            });
-                            System.out.println("Error occurred while invoking Open AI API");
-                            return Mono.error(new Exception(
-                                    "Error occurred while generating wordage"));
-                        }
-                    });
-            ChatCompletionResponse completionResponse = completionResponseMono.block();
-            List<ChatCompletionResponseChoice> choices = completionResponse.getChoices();
-            ChatCompletionResponseChoice aChoice = choices.get(0);
-            return buildSuccessResponse(aChoice.getMessage().getContent());
+            Mono<ChatCompletionResponse> completionResponseMono = sendRequestToOpenAI(prompt);
+            return handleAIResponse(completionResponseMono);
         } catch (Exception e) {
-            return this.buildErrorResponse(e.getMessage());
+            return buildErrorResponse(e.getMessage());
         }
     }
 
     /**
-     * This method extracts the query params from the received event
+     * Extracts query string parameters from the input map.
      * 
-     * @param input
-     * @return
+     * @param input The input map containing request data.
+     * @return A map of query string parameters.
      */
     private Map<String, String> extractQueryString(Map<String, Object> input) {
         Map<String, Object> queryStringMap = (Map<String, Object>) input.get("queryStringParameters");
@@ -120,426 +88,237 @@ public class OpenAILambda implements RequestHandler<Map<String, Object>, Object>
             String queryString = (String) queryStringMap.get("querystring");
             if (queryString != null) {
                 return parseQueryString(queryString);
-            } else {
-                System.out.println("No query string parameters found.");
             }
-        } else {
-            System.out.println("No queryStringParameters found.");
         }
-        return null;
+        return Map.of();
     }
 
     /**
-     * This method converts a String into a Map
+     * Parses a query string into a map.
      * 
-     * @param queryString
-     * @return
+     * @param queryString The query string to parse.
+     * @return A map of query parameters.
      */
     private Map<String, String> parseQueryString(String queryString) {
-        Map<String, String> queryMap = new HashMap<>();
-
-        // Remove leading and trailing braces if present
-        if (queryString.startsWith("{") && queryString.endsWith("}")) {
-            queryString = queryString.substring(1, queryString.length() - 1);
-        }
-
-        // Split the string by comma and space
-        String[] pairs = queryString.split(", ");
-
-        for (String pair : pairs) {
-            String[] keyValue = pair.split("=");
-            if (keyValue.length == 2) {
-                String key = keyValue[0];
-                String value = keyValue[1];
-
-                // Handle boolean values
-                if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
-                    queryMap.put(key, value);
-                } else {
-                    // For non-boolean values, put the key-value pair in the map
-                    queryMap.put(key, value);
-                }
-            } else if (keyValue.length == 1) {
-                // If there's no '=', treat the whole string as a key with a value of "true"
-                queryMap.put(keyValue[0], "true");
-            }
-        }
-
-        return queryMap;
+        return Arrays.stream(queryString.replaceAll("[{}]", "").split(", "))
+            .map(pair -> pair.split("="))
+            .collect(Collectors.toMap(
+                keyValue -> keyValue[0],
+                keyValue -> keyValue.length > 1 ? keyValue[1] : "true"
+            ));
     }
 
     /**
-     * This method retrieves the clear text value for the openai key from the
-     * parameter store
+     * Retrieves a parameter value from AWS SSM.
      * 
-     * @return
+     * @param parameterName The name of the parameter to retrieve.
+     * @return The decrypted parameter value.
      */
-    private String getOpenAIKeyFromParameterStore() {
+    private String getParameterValue(String parameterName) {
         try {
             GetParameterRequest parameterRequest = GetParameterRequest.builder()
-                    .name(OPENAI_API_KEY_NAME)
+                    .name(parameterName)
                     .withDecryption(true)
                     .build();
             GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
             return parameterResponse.parameter().value();
-
         } catch (SsmException e) {
-            System.out.println("SSM Error: " + e.getMessage());
-            System.exit(1);
+            System.err.println("SSM Error: " + e.getMessage());
+            throw new RuntimeException(e);
         }
-        return null;
     }
 
     /**
-     * This method retrieves the clear text value for the openai model from the
-     * parameter store
+     * Generates a prompt based on query parameters.
      * 
-     * @return
-     */
-    private String getOpenAIModelFromParameterStore() {
-        try {
-            GetParameterRequest parameterRequest = GetParameterRequest.builder()
-                    .name(OPENAI_MODEL_NAME)
-                    .withDecryption(true)
-                    .build();
-
-            GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            return parameterResponse.parameter().value();
-
-        } catch (SsmException e) {
-            System.out.println("SSM Error: " + e.getMessage());
-            System.exit(1);
-        }
-        return null;
-    }
-
-    /**
-     * This method retrieves the clear value for the openai temperature to use from
-     * the
-     * parameter store
-     * 
-     * @return
-     */
-    private Double getTemperatureFromParameterStore() {
-        try {
-            GetParameterRequest parameterRequest = GetParameterRequest.builder()
-                    .name(OPENAI_MODEL_TEMPERATURE)
-                    .withDecryption(true)
-                    .build();
-
-            GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            return Double.valueOf(parameterResponse.parameter().value());
-
-        } catch (SsmException e) {
-            System.out.println("SSM Error: " + e.getMessage());
-            System.exit(1);
-        }
-        return null;
-    }
-
-    /**
-     * This method retrieves the clear value for the openai max tokens to use from
-     * the
-     * parameter store
-     * 
-     * @return
-     */
-    private Integer getMaxTokensFromParameterStore() {
-        try {
-            GetParameterRequest parameterRequest = GetParameterRequest.builder()
-                    .name(OPENAI_MAX_TOKENS)
-                    .withDecryption(true)
-                    .build();
-
-            GetParameterResponse parameterResponse = this.ssmClient.getParameter(parameterRequest);
-            return Integer.valueOf(parameterResponse.parameter().value());
-
-        } catch (SsmException e) {
-            System.out.println("SSM Error: " + e.getMessage());
-            System.exit(1);
-        }
-        return null;
-    }
-
-    /**
-     * This method generates the prompt that will be sent to the openai api
-     * 
-     * @return
+     * @param input A map of query parameters.
+     * @return The generated prompt as a string.
      */
     private String generatePrompt(Map<String, String> input) {
-        try {
-            String userId = input.get("userId").toString();
-            String measureUnit = input.get("measureUnit").toString();
-            int calories = Integer.parseInt(input.get("calories").toString());
-            int protein = Integer.parseInt(input.get("protein").toString());
-            int carbs = Integer.parseInt(input.get("carbs").toString());
-            int fat = Integer.parseInt(input.get("fat").toString());
-            String satietyLevel = input.get("satietyLevel").toString();
-            String precision = input.get("precision").toString(); // exact grams of protein, carbs and fat, or slight
-                                                                  // variation?
-            boolean anyIngredientsMode = Boolean.parseBoolean(input.get("anyIngredientsMode").toString());
-            boolean expandIngredients = Boolean.parseBoolean(input.get("expandIngredients").toString());
-            boolean glutenFree = Boolean.parseBoolean(input.get("glutenFree").toString());
-            boolean vegan = Boolean.parseBoolean(input.get("vegan").toString());
-            boolean vegetarian = Boolean.parseBoolean(input.get("vegetarian").toString());
-            String cuisineStyle = input.get("cuisineStyle").toString();
-            String cookingTime = input.get("cookingTime").toString();
-            String flavor = input.get("flavor").toString();
-            String occasion = input.get("occasion").toString();
+        String userId = input.get("userId");
+        int calories = Integer.parseInt(input.get("calories"));
+        int protein = Integer.parseInt(input.get("protein"));
+        int carbs = Integer.parseInt(input.get("carbs"));
+        int fat = Integer.parseInt(input.get("fat"));
 
-            QueryResponse queryResponse = this.getUserData(userId);
-            Map<String, AttributeValue> userData = queryResponse.items().get(0);
-            return this.createPrompt(precision, measureUnit, calories, protein, carbs, fat, satietyLevel,
-                    anyIngredientsMode,
-                    expandIngredients, glutenFree, vegan, vegetarian, cuisineStyle, cookingTime, flavor, occasion,
-                    userData);
-        } catch (Exception e) {
-            System.out.println("Error while deserializing input params: " + e.getMessage());
-            return null;
-        }
+        QueryResponse queryResponse = getUserData(userId);
+        Map<String, AttributeValue> userData = queryResponse.items().get(0);
+
+        String nutrientGoals = String.format(
+            "Provide 5 recipes based on %d calories, %d grams of protein, %d grams of carbs, and %d grams of fat. ",
+            calories, protein, carbs, fat);
+
+        String satietySettings = generateSatietySettings(input.get("satietyLevel"));
+        String ingredientDetails = generateIngredientDetails(userData, input.get("measureUnit"),
+            Boolean.parseBoolean(input.get("anyIngredientsMode")));
+        String dietaryPreferences = generateDietaryPreferences(input, userData);
+
+        return nutrientGoals + satietySettings + ingredientDetails + dietaryPreferences;
     }
 
     /**
-     * This method retrieves the data of a user, by its userId
+     * Generates satiety settings for the prompt.
+     */
+    private String generateSatietySettings(String satietyLevel) {
+        if (isNonEmpty(satietyLevel)) {
+            return String.format("Ensure they are %s. ", satietyLevel);
+        }
+        return "";
+    }
+    
+    /**
+     * Generates ingredient details for the prompt.
+     */
+    private String generateIngredientDetails(Map<String, AttributeValue> userData,
+                                             String measureUnit, boolean anyIngredientsMode) {
+        if (!anyIngredientsMode) {
+            return " Include only these ingredients available at home: " +
+                   userData.get("food").m().entrySet().stream()
+                           .map(entry -> formatFoodItem(entry, measureUnit))
+                           .collect(Collectors.joining(", ")) + ". ";
+        }
+        return "";
+    }
+
+    /**
+     * Formats a food item entry for inclusion in the prompt.
+     */
+    private String formatFoodItem(Map.Entry<String, AttributeValue> entry, String measureUnit) {
+        String foodName = entry.getKey();
+        AttributeValue quantityAttr = entry.getValue();
+        int quantity = parseQuantity(quantityAttr);
+        return quantity > 0 ? String.format("%d %s of %s", quantity, measureUnit, foodName) : "";
+    }
+
+    /**
+     * Parses the quantity of an AttributeValue.
+     */
+    private int parseQuantity(AttributeValue quantityAttr) {
+        if (quantityAttr.n() != null) {
+            return Integer.parseInt(quantityAttr.n());
+        } else if (quantityAttr.s() != null && !quantityAttr.s().equalsIgnoreCase("0")) {
+            return Integer.parseInt(quantityAttr.s());
+        }
+        return 0;
+    }
+
+    /**
+     * Generates dietary preferences for the prompt.
+     */
+    private String generateDietaryPreferences(Map<String, String> input, Map<String, AttributeValue> userData) {
+        StringBuilder preferences = new StringBuilder();
+        appendDietLimitations(preferences, userData);
+        appendUserAttributes(preferences, input);
+        return preferences.toString();
+    }
+
+    private void appendDietLimitations(StringBuilder preferences, Map<String, AttributeValue> userData) {
+        boolean userIsVegan = Boolean.parseBoolean(userData.getOrDefault("vegan", AttributeValue.builder().bool(false)).bool().toString());
+        boolean userIsVegetarian = Boolean.parseBoolean(userData.getOrDefault("vegetarian", AttributeValue.builder().bool(false)).bool().toString());
+        
+        if (userIsVegan) {
+            preferences.append("Ensure recipes are vegan-friendly. ");
+        } else if (userIsVegetarian) {
+            preferences.append("Ensure recipes are vegetarian-friendly. ");
+        }
+    }
+
+    private void appendUserAttributes(StringBuilder preferences, Map<String, String> input) {
+        appendIfNonEmpty(preferences, "Focus on %s cuisine. ", input.get("cuisineStyle"));
+        appendIfNonEmpty(preferences, "Max cooking time is %s. ", input.get("cookingTime"));
+        appendIfNonEmpty(preferences, "Flavor profile: %s. ", input.get("flavor"));
+        appendIfNonEmpty(preferences, "Suitable for %s. ", input.get("occasion"));
+    }
+
+    private void appendIfNonEmpty(StringBuilder builder, String template, String value) {
+        if (isNonEmpty(value)) {
+            builder.append(String.format(template, value));
+        }
+    }
+
+    private boolean isNonEmpty(String value) {
+        return value != null && !value.isEmpty();
+    }
+
+    /**
+     * Retrieves user data from DynamoDB.
      * 
-     * @param userId
-     * @return
+     * @param userId The user ID to query.
+     * @return The response from DynamoDB query.
      */
     private QueryResponse getUserData(String userId) {
         try {
-            Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
-            expressionAttributeValues.put(":uid", AttributeValue.builder().s(userId).build());
-            String keyConditionExpression = "userId = :uid";
-
+            Map<String, AttributeValue> expressionAttributeValues = Map.of(
+                    ":uid", AttributeValue.builder().s(userId).build());
             QueryRequest queryRequest = QueryRequest.builder()
                     .tableName("FitMyMacros")
-                    .keyConditionExpression(keyConditionExpression)
+                    .keyConditionExpression("userId = :uid")
                     .expressionAttributeValues(expressionAttributeValues)
                     .build();
-
             return dynamoDbClient.query(queryRequest);
-
         } catch (DynamoDbException e) {
             throw new RuntimeException("Error retrieving data from DynamoDB: " + e.getMessage());
         }
     }
 
     /**
-     * This method creates the prompt that will be sent to openAI, based on the data
-     * that the user has in the DB (food and quantities, allergies, vegan...) and
-     * the actual data for the desired recipe generation (calories, macros...)
+     * Sends the prompt to OpenAI API and returns the response.
      * 
-     * @param precision
-     * @param measureUnit
-     * @param calories
-     * @param protein
-     * @param carbs
-     * @param fat
-     * @param satietyLevel
-     * @param anyIngredientsMode
-     * @param expandIngredients
-     * @param glutenFree
-     * @param vegan
-     * @param vegetarian
-     * @param cuisineStyle
-     * @param cookingTime
-     * @param flavor
-     * @param occasion
-     * @param userData
-     * @return
+     * @param prompt The prompt string for the AI.
+     * @return The Mono of ChatCompletionResponse from OpenAI.
      */
-    private String createPrompt(String precision, String measureUnit, int calories, int protein, int carbs, int fat,
-            String satietyLevel, boolean anyIngredientsMode, boolean expandIngredients, boolean glutenFree,
-            boolean vegan, boolean vegetarian, String cuisineStyle, String cookingTime, String flavor,
-            String occasion, Map<String, AttributeValue> userData) {
-
-        System.out.println("userData: " + userData);
-        StringBuilder promptBuilder = new StringBuilder();
-
-        // Target nutritional goals
-        promptBuilder.append(
-                String.format(
-                        "Give me the name of 5 recipes.",
-                        precision, calories, protein, measureUnit, carbs, measureUnit, fat, measureUnit));
-
-        // Desired satiety level
-        if (satietyLevel.equalsIgnoreCase("satiating") || satietyLevel.equalsIgnoreCase("non satiating"))
-            promptBuilder.append(String.format("Ensure they are %s", satietyLevel));
-
-        // Details about available ingredients
-        if (!anyIngredientsMode) {
-            String weightMeasureUnit = userData.get("weightUnit").s();
-            promptBuilder.append(
-                    ". You can only include the following ingredients available at home: ");
-            // printUserData(userData);
-            Map<String, AttributeValue> foodMap = userData.get("food").m();
-            for (Map.Entry<String, AttributeValue> entry : foodMap.entrySet()) {
-                String foodName = entry.getKey();
-                AttributeValue quantityAttr = entry.getValue();
-                if (fruitUnits.contains(foodName)) { // for these foods use units
-                    int foodQuantity = Integer.parseInt(quantityAttr.s());
-                    if (foodQuantity != 0)
-                        promptBuilder.append(String.format(", %d units of %s", foodQuantity, foodName));
-                } else if (quantityAttr.n() != null) { // Check if it's a number
-                    int foodQuantity = Integer.parseInt(quantityAttr.n());
-                    if (foodQuantity != 0)
-                        promptBuilder.append(String.format(", %d%s of %s", foodQuantity, measureUnit, foodName));
-                } else if (quantityAttr.s() != null) { // Check if it's a string
-                    String foodQuantityString = quantityAttr.s();
-                    if (!foodQuantityString.equalsIgnoreCase("0"))
-                        promptBuilder.append(String.format(", %s%s %s", foodQuantityString, measureUnit, foodName));
-                }
-            }
-        }
-
-        // previous 10 generated recipes
-        List<AttributeValue> recipeList = userData.get("previous_recipes") != null
-                ? userData.get("previous_recipes").l()
-                : new ArrayList<>();
-        if (recipeList != null && !recipeList.isEmpty()) {
-            promptBuilder.append(". If possible, create recipes that heavily differ in ingredients and flavour from:");
-            System.out.println("recipeList: " + recipeList);
-            recipeList.forEach(recipe -> {
-                String recipeName = recipe.s();
-                System.out.println("recipe: " + recipeName);
-                promptBuilder.append(String.format(" %s,", recipeName));
-            });
-            // Remove trailing comma
-            promptBuilder.deleteCharAt(promptBuilder.length() - 1);
-        }
-
-        // Exclude any allergens or intolerances
-        List<AttributeValue> allergiesList = userData.get("allergies-intolerances") != null
-                ? userData.get("allergies-intolerances").l()
-                : new ArrayList<>();
-        System.out.println("allergies: " + allergiesList);
-        if (!allergiesList.isEmpty()) {
-            promptBuilder.append(", avoiding ingredients such as");
-            for (AttributeValue allergy : allergiesList) {
-                String allergyName = allergy.s();
-                promptBuilder.append(String.format(" %s,", allergyName));
-            }
-            // Remove trailing comma
-            promptBuilder.deleteCharAt(promptBuilder.length() - 1);
-        }
-
-        // Vegan diet?
-        boolean userIsVegan = userData.get("vegan").bool();
-        boolean userIsVegetarian = userData.get("vegetarian").bool();
-        if (userIsVegan)
-            promptBuilder.append(", and ensuring all recipes are vegan-friendly");
-        else if (userIsVegetarian) {
-            if (vegan) {
-                promptBuilder.append(", and ensuring all recipes are vegan-friendly");
-            } else
-                promptBuilder.append(", and ensuring all recipes are vegetarian-friendly");
-        } else if (vegan || vegetarian) {
-            promptBuilder.append(", and ensuring all recipes are");
-            if (vegan) {
-                promptBuilder.append(" vegan-friendly");
-            } else {
-                promptBuilder.append(" vegetarian-friendly");
-            }
-        }
-
-        String dietType = userData.get("dietType").s();
-        // Diet type
-        if (cuisineStyle != null && !cuisineStyle.isEmpty()) {
-            promptBuilder.append(String.format(", ensuring it fits %s diet", dietType));
-        }
-
-        // Cuisine style
-        if (cuisineStyle != null && !cuisineStyle.isEmpty()) {
-            promptBuilder.append(String.format(", with a focus on %s cuisine", cuisineStyle));
-        }
-
-        // Cooking time
-        if (cookingTime != null && !cookingTime.isEmpty()) {
-            promptBuilder.append(String.format(", a maximum cooking time of %s", cookingTime));
-        }
-
-        // Flavor profile
-        if (flavor != null && !flavor.isEmpty()) {
-            promptBuilder.append(String.format(", a %s flavor profile", flavor));
-        }
-
-        // Occasion
-        if (occasion != null && !occasion.isEmpty()) {
-            promptBuilder.append(String.format(", and suitable for %s", occasion));
-        }
-
-        // Construct the final prompt
-        return promptBuilder.toString();
+    private Mono<ChatCompletionResponse> sendRequestToOpenAI(String prompt) {
+        return webClient.post()
+                .uri(URL)
+                .headers(headers -> {
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    headers.setBearerAuth(openAIApiKey);
+                })
+                .bodyValue(objectMapper.writeValueAsString(createRequestBody(prompt)))
+                .exchangeToMono(response -> handleApiResponse(response));
     }
 
-    public void printUserData(Map<String, AttributeValue> userData) {
-        System.out.println("Entering printUserData");
-        for (Map.Entry<String, AttributeValue> entry : userData.entrySet()) {
-            String key = entry.getKey();
-            AttributeValue value = entry.getValue();
-
-            // Determine the type of the AttributeValue and print it accordingly
-            if (value.s() != null) {
-                System.out.println(key + ": " + value.s());
-            } else if (value.n() != null) {
-                System.out.println(key + ": " + value.n());
-            } else if (value.bool() != null) {
-                System.out.println(key + ": " + value.bool());
-            } else if (value.l() != null) {
-                System.out.println(key + ": " + value.l());
-            } else if (value.m() != null) {
-                System.out.println(key + ": {");
-                printUserData(value.m());
-                System.out.println("}");
-            } else if (value.ss() != null) {
-                System.out.println(key + ": " + value.ss());
-            } else if (value.ns() != null) {
-                System.out.println(key + ": " + value.ns());
-            } else if (value.bs() != null) {
-                System.out.println(key + ": " + value.bs());
-            } else {
-                System.out.println(key + ": (unknown type)");
-            }
-        }
+    private Mono<ChatCompletionResponse> handleApiResponse(WebClient.ResponseSpec response) {
+        return response.bodyToMono(ChatCompletionResponse.class)
+                .doOnError(Throwable::printStackTrace);
     }
 
-    /**
-     * This method creates the instructions that define the format that the model
-     * must use for returning the response
-     * 
-     * @return
-     */
+    private Map<String, Object> createRequestBody(String prompt) {
+        return Map.of(
+            "model", openAIModel,
+            "messages", List.of(
+                Map.of("role", "system", "content", generateSystemInstructions()),
+                Map.of("role", "user", "content", prompt)
+            ),
+            "max_tokens", modelMaxTokens,
+            "temperature", modelTemperature
+        );
+    }
+
     private String generateSystemInstructions() {
         return "You're a helpful assistant, that just returns recipes names and their short description as a JSON with this format: {\"recipe1\": description of the recipe, \"recipe2\": description of the recipe...}";
     }
 
     /**
-     * This method removes any leading or trailing characters that could be
-     * generated before or after the JsonArray
+     * Handles the AI response and builds a success response.
      * 
-     * @param openAIResult
-     * @return
+     * @param completionResponseMono The Mono for ChatCompletionResponse.
+     * @return The response map for a success scenario.
      */
-    private String parseJsonArray(String openAIResult) {
-        int startIndex = openAIResult.indexOf('[');
-        int endIndex = openAIResult.lastIndexOf(']');
-
-        if (startIndex != -1 && endIndex != -1) {
-            return openAIResult.substring(startIndex, endIndex + 1);
-        } else {
-            throw new RuntimeException("Invalid JSON string format generated by OpenAI");
-        }
+    private Map<String, Object> handleAIResponse(Mono<ChatCompletionResponse> completionResponseMono) {
+        ChatCompletionResponse completionResponse = completionResponseMono.block();
+        ChatCompletionResponseChoice choice = completionResponse.getChoices().get(0);
+        return buildSuccessResponse(choice.getMessage().getContent());
     }
 
     private Map<String, Object> buildSuccessResponse(String response) {
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("statusCode", 200);
-        responseBody.put("body", response);
-        return responseBody;
+        return Map.of(
+            "statusCode", HttpStatus.OK.value(),
+            "body", response
+        );
     }
 
     private String buildErrorResponse(String errorMessage) {
         return "Error occurred: " + errorMessage;
     }
-
 }
